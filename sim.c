@@ -202,7 +202,7 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _(';', udp)                                                                  \
   _('=', osc)                                                                  \
   _('?', midipb)                                                               \
-  _('~', scale)
+  _('^', scale)
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \
