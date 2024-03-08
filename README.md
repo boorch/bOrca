@@ -23,6 +23,10 @@ Outputs "note" based on the provided root note and scale.
 |:--------:|:-----:|:--------:|:------:|
 |    R     |   S   |    ^     |   D    |
 
+*Example:* C3^5
+
+*Suggestion:* Put a Clock on top of Degree.
+
 
 | Value | Scale Name               |
 |:-----:|--------------------------|
