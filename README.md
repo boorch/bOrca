@@ -1,5 +1,16 @@
 # ORCΛ
 
+## About this fork
+
+I'll try to add new operators based on my needs.
+
+## Scale Operator (^)
+
+Left input chooses scale, right input chooses degree.
+
+
+
+
 Orca is an [esoteric programming language](https://en.wikipedia.org/wiki/Esoteric_programming_language) and live editor designed to quickly create procedural sequencers. Every letter of the alphabet is an operation, lowercase letters execute on `*bang*`, and uppercase letters execute each frame.
 
 This is the C implementation of the [ORCΛ](https://wiki.xxiivv.com/site/orca.html) language and terminal livecoding environment. It's designed to be power efficient. It can handle large files, even if your terminal is small.
