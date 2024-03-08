@@ -13,35 +13,35 @@ Usz find_note_index(Glyph root_note_glyph) {
 }
 
 // Scale intervals with base36 (Orca) to decimal conversion for C
-static int major_scale[] = {0, 2, 4, 5, 7, 9, 11}; // "024579b"
-static int minor_scale[] = {0, 2, 3, 5, 7, 8, 10}; // "023578a"
-static int major_pentatonic_scale[] = {0, 2, 4, 7, 9}; // "02479"
-static int minor_pentatonic_scale[] = {0, 3, 5, 7, 10}; // "0357a"
-static int blues_major_scale[] = {0, 2, 3, 4, 7, 9}; // "023479"
-static int blues_minor_scale[] = {0, 3, 5, 6, 7, 10}; // "03567a"
-static int lydian_scale[] = {0, 2, 4, 6, 7, 9, 11}; // "024679b"
-static int whole_scale[] = {0, 2, 4, 6, 8, 10}; // "02468a"
-static int diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10}; // "0134679a"
-static int super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10}; // "013468a"
-static int locrian_scale[] = {0, 1, 3, 5, 6, 8, 10}; // "013568a"
-static int phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10}; // "013578a"
-static int neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
-static int neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
-static int hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10}; // "01358a"
-static int pelog_scale[] = {0, 1, 3, 7, 8}; // "01378"
-static int spanish_scale[] = {0, 1, 4, 5, 7, 8, 10}; // "014578a"
-static int bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11}; // "014578b"
-static int ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10}; // "014579a"
-static int augmented2_scale[] = {0, 1, 4, 5, 8, 9}; // "014589"
-static int purvi_scale[] = {0, 1, 4, 6, 7, 8, 11}; // "014678b"
-static int marva_scale[] = {0, 1, 4, 6, 7, 9, 11}; // "014679b"
-static int enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11}; // "01468ab"
-static int scriabin_scale[] = {0, 1, 4, 7, 9}; // "01479"
-static int indian_scale[] = {0, 4, 5, 7, 10}; // "0457a"
+static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11}; // "024579b"
+static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10}; // "023578a"
+static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9}; // "02479"
+static Usz minor_pentatonic_scale[] = {0, 3, 5, 7, 10}; // "0357a"
+static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9}; // "023479"
+static Usz blues_minor_scale[] = {0, 3, 5, 6, 7, 10}; // "03567a"
+static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11}; // "024679b"
+static Usz whole_scale[] = {0, 2, 4, 6, 8, 10}; // "02468a"
+static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10}; // "0134679a"
+static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10}; // "013468a"
+static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10}; // "013568a"
+static Usz phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10}; // "013578a"
+static Usz neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
+static Usz neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
+static Usz hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10}; // "01358a"
+static Usz pelog_scale[] = {0, 1, 3, 7, 8}; // "01378"
+static Usz spanish_scale[] = {0, 1, 4, 5, 7, 8, 10}; // "014578a"
+static Usz bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11}; // "014578b"
+static Usz ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10}; // "014579a"
+static Usz augmented2_scale[] = {0, 1, 4, 5, 8, 9}; // "014589"
+static Usz purvi_scale[] = {0, 1, 4, 6, 7, 8, 11}; // "014678b"
+static Usz marva_scale[] = {0, 1, 4, 6, 7, 9, 11}; // "014679b"
+static Usz enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11}; // "01468ab"
+static Usz scriabin_scale[] = {0, 1, 4, 7, 9}; // "01479"
+static Usz indian_scale[] = {0, 4, 5, 7, 10}; // "0457a"
 
 
 // Scale array pointers
-static int* scales[] = {
+static Usz* scales[] = {
     major_scale, minor_scale, major_pentatonic_scale, minor_pentatonic_scale,
     blues_major_scale, blues_minor_scale, lydian_scale, whole_scale,
     diminished_scale, super_locrian_scale, locrian_scale, phrygian_scale,
@@ -819,9 +819,8 @@ BEGIN_OPERATOR(scale)
     return; // Check for valid scale and root note
   
   Usz scale_length = scale_lengths[scale_index]; // Use Usz for length
+  // If changing `scales` definition to `Usz` is not feasible or desired, ensure calculations do not result in negative values
   Usz note_index = (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
-
-  int note_value = scales[scale_index][note_index];
   Glyph output_note_glyph = note_sequence[note_index];
   POKE(1, 0, output_note_glyph); // Output the note
 END_OPERATOR
