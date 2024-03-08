@@ -1,6 +1,52 @@
 #include "sim.h"
 #include "gbuffer.h"
 
+//////// Scale Data
+
+// Scale intervals
+static int major_scale[] = {0, 2, 4, 5, 7, 9, 11};
+static int minor_scale[] = {0, 2, 3, 5, 7, 8, 10};
+static int major_pentatonic_scale[] = {0, 2, 4, 7, 9};
+static int minor_pentatonic_scale[] = {0, 3, 5, 7, 10};
+static int blues_major_scale[] = {0, 2, 3, 4, 7, 9};
+static int blues_minor_scale[] = {0, 3, 5, 6, 7, 10};
+static int lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};
+static int whole_scale[] = {0, 2, 4, 6, 8, 10};
+static int diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};
+static int super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};
+static int locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};
+static int phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10};
+static int neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11};
+static int neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11};
+static int hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10};
+static int pelog_scale[] = {0, 1, 3, 7, 8};
+static int spanish_scale[] = {0, 1, 4, 5, 7, 8, 10};
+static int bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11};
+static int ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10};
+static int augmented2_scale[] = {0, 1, 4, 5, 8, 9};
+static int purvi_scale[] = {0, 1, 4, 6, 7, 8, 11};
+static int marva_scale[] = {0, 1, 4, 6, 7, 9, 11};
+static int enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11};
+static int scriabin_scale[] = {0, 1, 4, 7, 9};
+static int indian_scale[] = {0, 4, 5, 7, 10};
+
+// Scale array pointers
+static int* scales[] = {
+    major_scale, minor_scale, major_pentatonic_scale, minor_pentatonic_scale,
+    blues_major_scale, blues_minor_scale, lydian_scale, whole_scale,
+    diminished_scale, super_locrian_scale, locrian_scale, phrygian_scale,
+    neapolitan_minor_scale, neapolitan_major_scale, hex_phrygian_scale,
+    pelog_scale, spanish_scale, bhairav_scale, ahirbhairav_scale,
+    augmented2_scale, purvi_scale, marva_scale, enigmatic_scale,
+    scriabin_scale, indian_scale
+};
+
+// Lengths of each scale
+static int scale_lengths[] = {
+    7, 7, 5, 5, 6, 6, 7, 6, 8, 7, 7, 7, 7, 7, 6, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5
+};
+
+
 //////// Utilities
 
 static Glyph const glyph_table[36] = {
@@ -155,7 +201,8 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _(':', midi)                                                                 \
   _(';', udp)                                                                  \
   _('=', osc)                                                                  \
-  _('?', midipb)
+  _('?', midipb)                                                               \
+  _('~', scale)
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \
@@ -741,6 +788,21 @@ BEGIN_OPERATOR(lerp)
   Isz val = (Isz)index_of(PEEK(1, 0));
   Isz mod = val <= goal - rate ? rate : val >= goal + rate ? -rate : goal - val;
   POKE(1, 0, glyph_with_case(glyph_of((Usz)(val + mod)), b));
+END_OPERATOR
+
+BEGIN_OPERATOR(scale)
+  PORT(0, -1, IN | PARAM); // Scale
+  PORT(0, 1, IN);          // Degree
+  Glyph scale_glyph = PEEK(0, -1);
+  Glyph degree_glyph = PEEK(0, 1);
+  int scale_index = index_of(scale_glyph); // Convert to scale index
+  int degree_index = index_of(degree_glyph); // Convert to degree index
+  if (scale_index >= sizeof(scales) / sizeof(scales[0]))
+    return; // Scale out of bounds
+  int scale_length = scale_lengths[scale_index];
+  int note_index = degree_index % scale_length; // Wrap around
+  Glyph note_glyph = glyph_of(scales[scale_index][note_index]);
+  POKE(1, 0, note_glyph); // Output the note
 END_OPERATOR
 
 //////// Run simulation
