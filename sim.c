@@ -801,7 +801,7 @@ BEGIN_OPERATOR(lerp)
 END_OPERATOR
 
 BEGIN_OPERATOR(scale)
-  PORT(-1, 0, IN | PARAM); // Root note
+  PORT(0, -2, IN | PARAM); // Root note
   PORT(0, -1, IN | PARAM); // Scale
   PORT(0, 1, IN);          // Degree
 
