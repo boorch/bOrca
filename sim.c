@@ -1,34 +1,33 @@
 #include "sim.h"
 #include "gbuffer.h"
 
-//////// Scale Data
+// Scale intervals with base36 (Orca) to decimal conversion for C
+static int major_scale[] = {0, 2, 4, 5, 7, 9, 11}; // "024579b"
+static int minor_scale[] = {0, 2, 3, 5, 7, 8, 10}; // "023578a"
+static int major_pentatonic_scale[] = {0, 2, 4, 7, 9}; // "02479"
+static int minor_pentatonic_scale[] = {0, 3, 5, 7, 10}; // "0357a"
+static int blues_major_scale[] = {0, 2, 3, 4, 7, 9}; // "023479"
+static int blues_minor_scale[] = {0, 3, 5, 6, 7, 10}; // "03567a"
+static int lydian_scale[] = {0, 2, 4, 6, 7, 9, 11}; // "024679b"
+static int whole_scale[] = {0, 2, 4, 6, 8, 10}; // "02468a"
+static int diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10}; // "0134679a"
+static int super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10}; // "013468a"
+static int locrian_scale[] = {0, 1, 3, 5, 6, 8, 10}; // "013568a"
+static int phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10}; // "013578a"
+static int neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
+static int neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
+static int hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10}; // "01358a"
+static int pelog_scale[] = {0, 1, 3, 7, 8}; // "01378"
+static int spanish_scale[] = {0, 1, 4, 5, 7, 8, 10}; // "014578a"
+static int bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11}; // "014578b"
+static int ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10}; // "014579a"
+static int augmented2_scale[] = {0, 1, 4, 5, 8, 9}; // "014589"
+static int purvi_scale[] = {0, 1, 4, 6, 7, 8, 11}; // "014678b"
+static int marva_scale[] = {0, 1, 4, 6, 7, 9, 11}; // "014679b"
+static int enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11}; // "01468ab"
+static int scriabin_scale[] = {0, 1, 4, 7, 9}; // "01479"
+static int indian_scale[] = {0, 4, 5, 7, 10}; // "0457a"
 
-// Scale intervals
-static int major_scale[] = {0, 2, 4, 5, 7, 9, 11};
-static int minor_scale[] = {0, 2, 3, 5, 7, 8, 10};
-static int major_pentatonic_scale[] = {0, 2, 4, 7, 9};
-static int minor_pentatonic_scale[] = {0, 3, 5, 7, 10};
-static int blues_major_scale[] = {0, 2, 3, 4, 7, 9};
-static int blues_minor_scale[] = {0, 3, 5, 6, 7, 10};
-static int lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};
-static int whole_scale[] = {0, 2, 4, 6, 8, 10};
-static int diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};
-static int super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};
-static int locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};
-static int phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10};
-static int neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11};
-static int neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11};
-static int hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10};
-static int pelog_scale[] = {0, 1, 3, 7, 8};
-static int spanish_scale[] = {0, 1, 4, 5, 7, 8, 10};
-static int bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11};
-static int ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10};
-static int augmented2_scale[] = {0, 1, 4, 5, 8, 9};
-static int purvi_scale[] = {0, 1, 4, 6, 7, 8, 11};
-static int marva_scale[] = {0, 1, 4, 6, 7, 9, 11};
-static int enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11};
-static int scriabin_scale[] = {0, 1, 4, 7, 9};
-static int indian_scale[] = {0, 4, 5, 7, 10};
 
 // Scale array pointers
 static int* scales[] = {
