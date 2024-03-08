@@ -23,12 +23,15 @@ Outputs "note" based on the provided root note and scale.
 |:--------:|:-----:|:--------:|:------:|
 |    R     |   S   |    ^     |   D    |
 
-*Example:* C3^5
+Example:
+- 01^2
+- Input '0': C
+- Input '1': minor
+- Input '2': 3rd
+- Output: 'd' (D#)
 
-*Suggestion:* Put a Clock on top of Degree.
 
-
-| Value | Scale Name               |
+| Degree | Scale               |
 |:-----:|--------------------------|
 |   0   | Major Scale              |
 |   1   | Minor Scale              |
