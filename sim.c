@@ -1,6 +1,17 @@
 #include "sim.h"
 #include "gbuffer.h"
 
+// Note Seuqnce
+static char note_sequence[] = "CcDdEFfGgAaB";
+
+Usz find_note_index(Glyph root_note_glyph) {
+  for (Usz i = 0; i < sizeof(note_sequence) - 1; i++) {
+    if (note_sequence[i] == root_note_glyph)
+      return i;
+  }
+  return UINT_MAX; // Indicate not found
+}
+
 // Scale intervals with base36 (Orca) to decimal conversion for C
 static int major_scale[] = {0, 2, 4, 5, 7, 9, 11}; // "024579b"
 static int minor_scale[] = {0, 2, 3, 5, 7, 8, 10}; // "023578a"
@@ -790,25 +801,29 @@ BEGIN_OPERATOR(lerp)
 END_OPERATOR
 
 BEGIN_OPERATOR(scale)
+  PORT(-1, 0, IN | PARAM); // Root note
   PORT(0, -1, IN | PARAM); // Scale
   PORT(0, 1, IN);          // Degree
+
+  Glyph root_note_glyph = PEEK(-1, 0);
   Glyph scale_glyph = PEEK(0, -1);
   Glyph degree_glyph = PEEK(0, 1);
+
+  Usz root_note_index = find_note_index(root_note_glyph); // Rot note index calc
   Usz scale_index = index_of(scale_glyph); // Keep as Usz to avoid sign conversion
   Usz degree_index = index_of(degree_glyph); // Keep as Usz
   
   // Use Usz for size calculation to avoid sign-compare warning
   Usz num_scales = sizeof(scales) / sizeof(scales[0]);
-  if (scale_index >= num_scales)
-    return; // Scale out of bounds check
+  if (scale_index >= num_scales || root_note_index == UINT_MAX)
+    return; // Check for valid scale and root note
   
   Usz scale_length = scale_lengths[scale_index]; // Use Usz for length
-  Usz note_index = degree_index % scale_length; // Wrap around safely
+  Usz note_index = (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
 
   int note_value = scales[scale_index][note_index];
-  Glyph note_glyph = glyph_of((Usz)note_value);
-  // Glyph note_glyph = glyph_of(scales[scale_index][note_index]);
-  POKE(1, 0, note_glyph); // Output the note
+  Glyph output_note_glyph = note_sequence[note_index];
+  POKE(1, 0, output_note_glyph); // Output the note
 END_OPERATOR
 
 
