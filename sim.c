@@ -795,15 +795,21 @@ BEGIN_OPERATOR(scale)
   PORT(0, 1, IN);          // Degree
   Glyph scale_glyph = PEEK(0, -1);
   Glyph degree_glyph = PEEK(0, 1);
-  int scale_index = index_of(scale_glyph); // Convert to scale index
-  int degree_index = index_of(degree_glyph); // Convert to degree index
-  if (scale_index >= sizeof(scales) / sizeof(scales[0]))
-    return; // Scale out of bounds
-  int scale_length = scale_lengths[scale_index];
-  int note_index = degree_index % scale_length; // Wrap around
+  Usz scale_index = index_of(scale_glyph); // Keep as Usz to avoid sign conversion
+  Usz degree_index = index_of(degree_glyph); // Keep as Usz
+  
+  // Use Usz for size calculation to avoid sign-compare warning
+  Usz num_scales = sizeof(scales) / sizeof(scales[0]);
+  if (scale_index >= num_scales)
+    return; // Scale out of bounds check
+  
+  Usz scale_length = scale_lengths[scale_index]; // Use Usz for length
+  Usz note_index = degree_index % scale_length; // Wrap around safely
+  
   Glyph note_glyph = glyph_of(scales[scale_index][note_index]);
   POKE(1, 0, note_glyph); // Output the note
 END_OPERATOR
+
 
 //////// Run simulation
 
