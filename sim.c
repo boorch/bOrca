@@ -801,36 +801,32 @@ BEGIN_OPERATOR(lerp)
 END_OPERATOR
 
 BEGIN_OPERATOR(scale)
-  PORT(0, -2, IN | PARAM); // Root note
+  PORT(0, -2, IN | PARAM); // Root note (0-'b')
   PORT(0, -1, IN | PARAM); // Scale
   PORT(0, 1, IN);          // Degree
-  
-  // Locking inputs to prevent them from acting as operators
-  LOCK(0, -2);
-  LOCK(0, -1);
-  LOCK(0, 1);
-  
+
   Glyph root_note_glyph = PEEK(0, -2);
   Glyph scale_glyph = PEEK(0, -1);
   Glyph degree_glyph = PEEK(0, 1);
-  
-  Usz root_note_index = find_note_index(root_note_glyph); // Implement find_note_index
+
+  Usz root_note_index = index_of(root_note_glyph); // Now directly gives the index
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
   // Ensure valid scale and root note
   Usz num_scales = sizeof(scales) / sizeof(scales[0]);
-  if (scale_index >= num_scales || root_note_index == UINT_MAX)
-    return;
-  
+  if (scale_index >= num_scales || root_note_index > 11)
+    return; // Check root_note_index for valid note range (0-'b')
+
   Usz scale_length = scale_lengths[scale_index];
   Usz note_index = (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
   
-  // Output the calculated note based on the root note, scale, and degree
+  // Assuming note_sequence is a mapping that aligns with '0'-'b' input for C-B
   Glyph output_note_glyph = note_sequence[note_index];
   POKE(1, 0, output_note_glyph); // Output the note
-  LOCK(1, 0); // Lock the output to prevent immediate execution
+  LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
 END_OPERATOR
+
 
 
 
