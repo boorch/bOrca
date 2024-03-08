@@ -42,7 +42,7 @@ static int* scales[] = {
 };
 
 // Lengths of each scale
-static int scale_lengths[] = {
+static Usz scale_lengths[] = {
     7, 7, 5, 5, 6, 6, 7, 6, 8, 7, 7, 7, 7, 7, 6, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5
 };
 
@@ -805,8 +805,10 @@ BEGIN_OPERATOR(scale)
   
   Usz scale_length = scale_lengths[scale_index]; // Use Usz for length
   Usz note_index = degree_index % scale_length; // Wrap around safely
-  
-  Glyph note_glyph = glyph_of(scales[scale_index][note_index]);
+
+  int note_value = scales[scale_index][note_index];
+  Glyph note_glyph = glyph_of((Usz)note_value);
+  // Glyph note_glyph = glyph_of(scales[scale_index][note_index]);
   POKE(1, 0, note_glyph); // Output the note
 END_OPERATOR
 
