@@ -842,8 +842,8 @@ BEGIN_OPERATOR(midichord)
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  // Cast the result of index_of() to int explicitly
-  int base_octave = (int)index_of(octave_g); // Cast to int explicitly for addition
+  int base_octave = (int)index_of(octave_g); // Explicitly cast for safe addition
+  U8 length = (U8)(index_of(length_g) & 0x7Fu); // Correctly declare and initialize length
   
   if (channel > 15) return;
 
@@ -852,14 +852,14 @@ BEGIN_OPERATOR(midichord)
 
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num != UINT8_MAX) {
+    if (note_num != UINT8_MAX) { // Note is valid
       if (note_num == last_note_num) {
         octave_increment++;
       } else {
         octave_increment = 0;
       }
       last_note_num = note_num;
-      
+
       int this_octave = base_octave + octave_increment;
       if (this_octave > 9 || this_octave < 0) continue; // Ensure within MIDI bounds
 
@@ -868,7 +868,7 @@ BEGIN_OPERATOR(midichord)
       Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
       oe->channel = (U8)channel;
-      oe->octave = (U8)this_octave; // Safe cast after ensuring within bounds
+      oe->octave = (U8)this_octave; // Ensure within bounds
       oe->note = note_num;
       oe->velocity = velocity;
       oe->duration = (U8)(length & 0x7F);
