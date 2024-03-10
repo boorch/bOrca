@@ -31,6 +31,7 @@ Example:
 - Output: 'd' (D#)
 
 
+
 | Degree | Scale               |
 |:-----:|--------------------------|
 |   0   | Major Scale              |
@@ -61,6 +62,30 @@ Example:
 
 Scales and offset values taken from
 https://patchstorage.com/author/amiika/
+
+
+## MidiChord Operator (|)
+Extension of Midi operator with 3 input notes. The first note processed is always considered the root note. Every following note is assumed to be "higher" than the previous one. (So no chord inversions sorry)
+
+| Midichord | Channel | Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
+|:---------:|:-------:|:------:|:------:|:------:|:------:|:--------:|:--------:|
+|     \|     |    C    |    O   |   N1   |   N2   |   N3   |    V     |    D     |
+
+Example 1:
+- |03CEGff
+- Plays C3 E3 G3
+
+Example 2:
+- |03GECff
+- Plays G3 E3 C4
+
+Example 3:
+- |03CCCff
+- Plays C3 C4 C5
+
+
+
+
 
 
 
