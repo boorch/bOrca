@@ -842,21 +842,30 @@ BEGIN_OPERATOR(midichord)
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  U8 octave = (U8)index_of(octave_g);
+  U8 base_octave = (U8)index_of(octave_g);
   U8 velocities[3] = {velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35)};
   U8 length = (U8)(index_of(length_g) & 0x7Fu);
 
-  if (channel > 15 || octave > 9) return;
+  if (channel > 15 || base_octave > 9) return;
+
+  U8 last_note_num = 0xFF; // Use an invalid note number to ensure correct comparison on first note
+  int octave_increment = 0;
 
   // Process each note
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
     if (note_num != UINT8_MAX) { // This note is valid
-      U8 this_octave = octave;
-      // If not the first note and the current note is less than the previous one, increase the octave
-      if (i > 0 && note_num <= midi_note_number_of(note_gs[i - 1])) {
-          this_octave++;
+      // Check if this note is the same as the last note
+      if (note_num == last_note_num) {
+          // Increment octave if the note is the same as the previous note
+          octave_increment++;
+      } else {
+          // Reset octave increment if the note is different
+          octave_increment = 0;
       }
+      last_note_num = note_num; // Update last note number
+
+      U8 this_octave = base_octave + octave_increment;
 
       Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
@@ -864,13 +873,14 @@ BEGIN_OPERATOR(midichord)
       oe->octave = this_octave;
       oe->note = note_num;
       oe->velocity = velocities[i];
-      oe->duration = (U8)(length & 0x7F); // Apply mask and cast, similar to original MIDI operator
+      oe->duration = length;
       oe->mono = 0;
     }
   }
 
   PORT(0, 0, OUT); // Indicate operation completion
 END_OPERATOR
+
 
 
 //////// Run simulation
