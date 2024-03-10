@@ -2273,8 +2273,8 @@ static void push_opers_guide_msg(void) {
       // {'%', "mono", "Sends MIDI monophonic note."},
       {'=', "osc", "Sends OSC message."},
       {';', "udp", "Sends UDP message."},
-      {'^', "scale", "Outputs Note base on root, scale, degree."},
-      {'|', "midichord", "Send up to 3 MIDI notes."},
+      {'^', "scale", "Outputs note base on root, scale, degree."},
+      {'|', "midichord", "Sends up to 3 MIDI notes."},
   };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
