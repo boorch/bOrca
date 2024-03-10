@@ -380,56 +380,47 @@ END_OPERATOR
 
 //BOORCH's new Midichord OP
 BEGIN_OPERATOR(midichord)
-  // Setup input ports for channel, octave, three notes, velocity, and length
   for (Usz i = 1; i < 8; ++i) {
     PORT(0, (Isz)i, IN);
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
-  Glyph note_g1 = PEEK(0, 3); // First note
-  Glyph note_g2 = PEEK(0, 4); // Second note
-  Glyph note_g3 = PEEK(0, 5); // Third note
+  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)}; // Three note glyphs
   Glyph velocity_g = PEEK(0, 6);
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  if (channel > 15) return; // Channel is out of MIDI bounds
-
-  U8 octave_num = (U8)index_of(octave_g);
-  if (octave_num > 9) return; // Octave is out of MIDI bounds
-
-  U8 vel_num = (velocity_g == '.' ? 127 : index_of(velocity_g) * 8 - 1);
-  if (vel_num > 127) vel_num = 127;
+  U8 octave = (U8)index_of(octave_g);
+  U8 velocities[3] = {velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35)};
   U8 length = (U8)(index_of(length_g) & 0x7Fu);
 
-  // Initial setup for note numbers and octaves
-  U8 note_nums[3] = {midi_note_number_of(note_g1), midi_note_number_of(note_g2), midi_note_number_of(note_g3)};
-  U8 octaves[3] = {octave_num, octave_num, octave_num};
+  if (channel > 15 || octave > 9) return;
 
-  // Adjust octaves for subsequent notes if they are higher than the previous note
-  for (int i = 1; i < 3; i++) {
-      if (note_nums[i] != UINT8_MAX && note_nums[i-1] != UINT8_MAX) {
-          if (note_nums[i] <= note_nums[i-1]) octaves[i] = octaves[i-1] + 1;
-      }
-  }
-
-  // Send the MIDI notes based on the input
+  // Process each note
   for (int i = 0; i < 3; i++) {
-      if (note_nums[i] != UINT8_MAX) { // Check if note is specified
-          Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-          oe->oevent_type = Oevent_type_midi_note;
-          oe->channel = (U8)channel;
-          oe->octave = octaves[i];
-          oe->note = note_nums[i];
-          oe->velocity = (U8)vel_num;
-          oe->duration = length;
-          oe->mono = 0; // Assuming polyphonic, since we're handling chords
+    U8 note_num = midi_note_number_of(note_gs[i]);
+    if (note_num != UINT8_MAX) { // This note is valid
+      U8 this_octave = octave;
+      // If not the first note and the current note is less than the previous one, increase the octave
+      if (i > 0 && note_num <= midi_note_number_of(note_gs[i - 1])) {
+          this_octave++;
       }
+
+      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = (U8)channel;
+      oe->octave = this_octave;
+      oe->note = note_num;
+      oe->velocity = velocities[i];
+      oe->duration = length;
+      oe->mono = 0;
+    }
   }
 
   PORT(0, 0, OUT); // Indicate operation completion
 END_OPERATOR
+
 
 BEGIN_OPERATOR(udp)
   Usz n = width - x - 1;
