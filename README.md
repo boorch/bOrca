@@ -64,7 +64,7 @@ Scales and offset values taken from
 https://patchstorage.com/author/amiika/
 
 
-## MidiChord Operator (|)
+## MidiChord Operator (|):
 Extension of Midi operator with 3 input notes. The first note processed is always considered the root note. Every following note is assumed to be "higher" than the previous one. (So no chord inversions sorry)
 
 | Midichord | Channel | Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
