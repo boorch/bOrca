@@ -842,9 +842,9 @@ BEGIN_OPERATOR(midichord)
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  int base_octave = index_of(octave_g); // Now as int for safe addition
-  U8 length = (U8)(index_of(length_g) & 0x7Fu);
-
+  // Cast the result of index_of() to int explicitly
+  int base_octave = (int)index_of(octave_g); // Cast to int explicitly for addition
+  
   if (channel > 15) return;
 
   U8 last_note_num = 0xFF; // Initially invalid
@@ -861,24 +861,24 @@ BEGIN_OPERATOR(midichord)
       last_note_num = note_num;
       
       int this_octave = base_octave + octave_increment;
-      if (this_octave > 9) continue; // Skip notes beyond MIDI octave bounds
+      if (this_octave > 9 || this_octave < 0) continue; // Ensure within MIDI bounds
 
       U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-      this_octave = this_octave < 0 ? 0 : this_octave; // Ensure octave is not negative
-
+      
       Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
       oe->channel = (U8)channel;
-      oe->octave = (U8)this_octave; // Safe cast after bounds check
+      oe->octave = (U8)this_octave; // Safe cast after ensuring within bounds
       oe->note = note_num;
       oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F); // Apply mask and cast, similar to original MIDI operator
+      oe->duration = (U8)(length & 0x7F);
       oe->mono = 0;
     }
   }
 
   PORT(0, 0, OUT);
 END_OPERATOR
+
 
 
 
