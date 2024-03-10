@@ -837,49 +837,49 @@ BEGIN_OPERATOR(midichord)
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
-  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)}; // Three note glyphs
+  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
   Glyph velocity_g = PEEK(0, 6);
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  U8 base_octave = (U8)index_of(octave_g);
-  U8 velocities[3] = {velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35), velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35)};
+  int base_octave = index_of(octave_g); // Now as int for safe addition
   U8 length = (U8)(index_of(length_g) & 0x7Fu);
 
-  if (channel > 15 || base_octave > 9) return;
+  if (channel > 15) return;
 
-  U8 last_note_num = 0xFF; // Use an invalid note number to ensure correct comparison on first note
+  U8 last_note_num = 0xFF; // Initially invalid
   int octave_increment = 0;
 
-  // Process each note
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num != UINT8_MAX) { // This note is valid
-      // Check if this note is the same as the last note
+    if (note_num != UINT8_MAX) {
       if (note_num == last_note_num) {
-          // Increment octave if the note is the same as the previous note
-          octave_increment++;
+        octave_increment++;
       } else {
-          // Reset octave increment if the note is different
-          octave_increment = 0;
+        octave_increment = 0;
       }
-      last_note_num = note_num; // Update last note number
+      last_note_num = note_num;
+      
+      int this_octave = base_octave + octave_increment;
+      if (this_octave > 9) continue; // Skip notes beyond MIDI octave bounds
 
-      U8 this_octave = base_octave + octave_increment;
+      U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+      this_octave = this_octave < 0 ? 0 : this_octave; // Ensure octave is not negative
 
       Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
       oe->channel = (U8)channel;
-      oe->octave = this_octave;
+      oe->octave = (U8)this_octave; // Safe cast after bounds check
       oe->note = note_num;
-      oe->velocity = velocities[i];
-      oe->duration = length;
+      oe->velocity = velocity;
+      oe->duration = (U8)(length & 0x7F); // Apply mask and cast, similar to original MIDI operator
       oe->mono = 0;
     }
   }
 
-  PORT(0, 0, OUT); // Indicate operation completion
+  PORT(0, 0, OUT);
 END_OPERATOR
+
 
 
 
