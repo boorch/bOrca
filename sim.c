@@ -899,7 +899,7 @@ BEGIN_OPERATOR(randomunique)
   Glyph max_glyph = PEEK(0, 1);
   
   Usz min = (min_glyph == '.') ? 0 : index_of(min_glyph);
-  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // 35 corresponds to 'z', assuming base36
+  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); 
   
   if (max < min) {
     Usz temp = max;
@@ -908,37 +908,39 @@ BEGIN_OPERATOR(randomunique)
   }
 
   Usz val;
-  bool isUniqueFound = false;
-
-  if (min == max) {
-    val = (min != last_random_unique || min == 0) ? min : 0; // Use min if it's not last or if min itself is 0
-    isUniqueFound = true; // Avoid the uniqueness check if min == max
+  
+  if (last_random_unique == UINT_MAX) { // Check if last_random_unique hasn't been set
+    val = min; // Use min as a safe starting point
   } else {
-    for (Usz attempt = 0; attempt < 2; ++attempt) { // Just need two attempts max, as there are at least 3 options (1, 2, 3)
-      Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
-      key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
-      key += (key << UINT32_C(3));
-      key ^= (key >> UINT32_C(4));
-      key *= UINT32_C(0x27d4eb2d);
-      key ^= (key >> UINT32_C(15));
-      val = key % (max - min + 1) + min;
-      
-      if (val != last_random_unique) {
-        isUniqueFound = true;
-        break; // Found a suitable unique value
-      }
+    val = last_random_unique; // Default to last unique value if no unique is found
+  }
+  
+  bool isUniqueFound = false;
+  for (Usz attempt = 0; attempt < 10; ++attempt) {
+    Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
+    key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
+    key += (key << UINT32_C(3));
+    key ^= (key >> UINT32_C(4));
+    key *= UINT32_C(0x27d4eb2d);
+    key ^= (key >> UINT32_C(15));
+    Usz potential_val = key % (max - min + 1) + min;
+    
+    if (potential_val != last_random_unique) {
+      val = potential_val; // Found a unique value
+      isUniqueFound = true;
+      break;
     }
   }
 
   if (!isUniqueFound) {
-    // This scenario should ideally never be hit given the logic above,
-    // but is here as a safeguard.
-    val = (min == 0) ? 1 : 0; // If somehow uniqueness isn't achieved, and min is 0, choose 1; otherwise, default to 0
+    // If no unique number found after 10 attempts, keep the last or default to 'min'
+    val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
   }
 
   last_random_unique = val; // Update the last unique value
   POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
+
 
 
 
