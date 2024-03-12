@@ -815,6 +815,13 @@ BEGIN_OPERATOR(scale)
   Glyph scale_glyph = PEEK(0, -1);
   Glyph degree_glyph = PEEK(0, 1);
 
+  // If degree is empty, output should also be empty
+  if (degree_glyph == '.') {
+    POKE(1, 0, '.'); // Output empty
+    LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
+    return;
+  }
+
   Usz root_note_index = index_of(root_note_glyph); // Now directly gives the index
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
@@ -832,6 +839,7 @@ BEGIN_OPERATOR(scale)
   POKE(1, 0, output_note_glyph); // Output the note
   LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
 END_OPERATOR
+
 
 //BOORCH's new Midichord OP
 BEGIN_OPERATOR(midichord)
