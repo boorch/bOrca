@@ -130,7 +130,6 @@ typedef struct {
   Glyph *vars_slots;
   Oevent_list *oevent_list;
   Usz random_seed;
-  Usz last_random_unique; // BOORCH
 } Oper_extra_params;
 
 static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
@@ -882,6 +881,12 @@ BEGIN_OPERATOR(midichord)
 END_OPERATOR
 
 // BOORCH's new Random Unique
+Usz last_random_unique = UINT_MAX;
+
+void reset_last_unique_value(void) {
+    last_random_unique = UINT_MAX; // Reset the value
+}
+
 BEGIN_OPERATOR(randomunique)
   LOWERCASE_REQUIRES_BANG;
   PORT(0, -1, IN | PARAM);
@@ -921,11 +926,6 @@ BEGIN_OPERATOR(randomunique)
   POKE(1, 0, glyph_with_case(glyph_of(val), gb));
 END_OPERATOR
 
-void reset_last_unique_value_in_params(Oper_extra_params *params) {
-    if (params != NULL) {
-        params->last_random_unique = UINT_MAX; // Or appropriate reset value
-    }
-}
 
 
 //////// Run simulation
