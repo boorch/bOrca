@@ -891,42 +891,50 @@ void reset_last_unique_value(void) {
 
 BEGIN_OPERATOR(randomunique)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
-  Glyph gb = PEEK(0, 1);
-  Usz a = index_of(PEEK(0, -1));
-  Usz b = index_of(gb);
-  if (b == 0)
-    b = 36;
-  Usz min, max;
-  if (a == b) {
-    POKE(1, 0, glyph_of(a));
-    return;
-  } else if (a < b) {
-    min = a;
-    max = b;
-  } else {
-    min = b;
-    max = a;
+  PORT(0, -1, IN | PARAM); // Min
+  PORT(0, 1, IN);          // Max
+  PORT(1, 0, OUT);         // Output
+  
+  Glyph min_glyph = PEEK(0, -1);
+  Glyph max_glyph = PEEK(0, 1);
+  
+  Usz min = (min_glyph == '.') ? 0 : index_of(min_glyph);
+  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // 35 corresponds to 'z', assuming base36
+  
+  if (max < min) {
+    Usz temp = max;
+    max = min;
+    min = temp;
   }
-  // Repeat until a unique value is generated
-  Usz val;
-  do {
-    // Similar random number generation as in the original random operator
-    Usz key = (extra_params->random_seed + y * width + x) ^
-              (Tick_number << UINT32_C(16));
-    key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
-    key = key + (key << UINT32_C(3));
-    key = key ^ (key >> UINT32_C(4));
-    key = key * UINT32_C(0x27d4eb2d);
-    key = key ^ (key >> UINT32_C(15));
-    val = key % (max - min) + min;
-  } while (val == last_random_unique);
 
-  last_random_unique = val; // Store the last generated value
-  POKE(1, 0, glyph_with_case(glyph_of(val), gb));
+  Usz val = 0; // Default to 0 if no unique number is found
+
+  // If min == max and it's not the same as the last unique value, just use it. 
+  // Otherwise, find a new unique value within the range
+  if (min == max) {
+    val = (min != last_random_unique) ? min : 0;
+  } else {
+    // Attempt to find a unique value within a reasonable number of attempts
+    for (Usz attempt = 0; attempt < 10; ++attempt) {
+      Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
+      key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
+      key += (key << UINT32_C(3));
+      key ^= (key >> UINT32_C(4));
+      key *= UINT32_C(0x27d4eb2d);
+      key ^= (key >> UINT32_C(15));
+      Usz potential_val = key % (max - min + 1) + min;
+      
+      if (potential_val != last_random_unique) {
+        val = potential_val;
+        break; // Found a suitable unique value
+      }
+    }
+  }
+
+  last_random_unique = val; // Update the last unique value
+  POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
+
 
 
 
