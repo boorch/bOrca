@@ -7,5 +7,9 @@ void orca_run(Glyph *restrict gbuffer, Mark *restrict mbuffer, Usz height,
               Usz random_seed);
 
 // BOORCH
-void reset_last_unique_value_in_params(Oper_extra_params *params);
+Usz last_random_unique = UINT_MAX; // Or another suitable initial value
+
+void reset_last_unique_value(void) {
+    last_random_unique = UINT_MAX; // Reset the value
+}
 
