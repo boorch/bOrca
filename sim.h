@@ -7,4 +7,5 @@ void orca_run(Glyph *restrict gbuffer, Mark *restrict mbuffer, Usz height,
               Usz random_seed);
 
 // BOORCH
-void reset_last_unique_value(void);
+void reset_last_unique_value_in_params(Oper_extra_params *params);
+
