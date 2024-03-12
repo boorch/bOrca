@@ -916,7 +916,7 @@ BEGIN_OPERATOR(randomunique)
   }
   
   bool isUniqueFound = false;
-  for (Usz attempt = 0; attempt < 10; ++attempt) {
+  for (Usz attempt = 0; attempt < 30; ++attempt) {
     Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
     key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
     key += (key << UINT32_C(3));
