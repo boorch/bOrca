@@ -940,7 +940,6 @@ void orca_run(Glyph *restrict gbuf, Mark *restrict mbuf, Usz height, Usz width,
   extras.vars_slots = &vars_slots[0];
   extras.oevent_list = oevent_list;
   extras.random_seed = random_seed;
-  extras.last_random_unique = UINT_MAX; // Resetting it for the new run
 
   for (Usz iy = 0; iy < height; ++iy) {
     Glyph const *glyph_row = gbuf + iy * width;
