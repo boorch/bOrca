@@ -901,7 +901,7 @@ BEGIN_OPERATOR(randomunique)
   // Initialize rand with current time if not already done
   static bool rand_initialized = false;
   if (!rand_initialized) {
-    srand(time(NULL));
+    srand((unsigned int)time(NULL)); // Corrected sign conversion warning
     rand_initialized = true;
   }
 
@@ -909,7 +909,7 @@ BEGIN_OPERATOR(randomunique)
   Glyph max_glyph = PEEK(0, 1);
   
   Usz min = (min_glyph == '.') ? 0 : index_of(min_glyph);
-  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); 
+  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // 35 corresponds to 'z', assuming base36
   
   if (max < min) {
     Usz temp = max;
@@ -917,7 +917,7 @@ BEGIN_OPERATOR(randomunique)
     min = temp;
   }
 
-  Usz val = last_random_unique;
+  Usz val = last_random_unique == UINT_MAX ? min : last_random_unique; // Handle UINT_MAX case
   bool isUniqueFound = false;
 
   for (Usz attempt = 0; attempt < 10; ++attempt) {
@@ -937,36 +937,31 @@ BEGIN_OPERATOR(randomunique)
   }
 
   if (!isUniqueFound) {
-    // Try adjusting ±2 or ±1 within bounds, chosen randomly
+    // Adjust using random choice between +2, -2, +1, -1
     int adjustments[4] = {2, -2, 1, -1};
-    int adjustment = adjustments[rand() % 4];
-    Usz potential_val = (int)val + adjustment;
-    if (adjustment == 2 || adjustment == -2) {
-      if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
-        val = potential_val;
-      } else {
-        // Try ±1 if ±2 out of bounds or equals last unique
-        adjustment = (rand() % 2 == 0) ? 1 : -1;
-        potential_val = (int)val + adjustment;
-        if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
-          val = potential_val;
+    int randomIndex = rand() % 4;
+    int adjustment = adjustments[randomIndex];
+    int potential_val_adjusted = (int)val + adjustment; // Perform operation in signed space
+    
+    // Check bounds and uniqueness after adjustment
+    if (potential_val_adjusted >= (int)min && potential_val_adjusted <= (int)max) {
+        Usz potential_val = (Usz)potential_val_adjusted; // Cast back to Usz
+        if (potential_val != last_random_unique) {
+            val = potential_val;
+            isUniqueFound = true;
         }
-      }
-    } else {
-      if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
-        val = potential_val;
-      }
     }
     
-    // If still no unique number found
+    // Final fallback to last unique or min
     if (!isUniqueFound) {
-      val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
+      val = last_random_unique == UINT_MAX ? min : last_random_unique; // Fallback to last unique or min
     }
   }
 
   last_random_unique = val; // Update the last unique value
   POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
+
 
 
 
