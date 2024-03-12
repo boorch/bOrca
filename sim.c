@@ -921,7 +921,11 @@ BEGIN_OPERATOR(randomunique)
   POKE(1, 0, glyph_with_case(glyph_of(val), gb));
 END_OPERATOR
 
-
+void reset_last_unique_value_in_params(Oper_extra_params *params) {
+    if (params != NULL) {
+        params->last_random_unique = UINT_MAX; // Or appropriate reset value
+    }
+}
 
 
 //////// Run simulation
