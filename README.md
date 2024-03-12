@@ -83,3 +83,6 @@ Example 3:
 - |03CCCff
 - Plays C3 C4 C5
 
+
+## Random Unique Operator ($):
+Requires bang. Similar to the Random Operator, but designed to avoid producing identical outputs on consecutive bangs in a creative (in other words, "hacky") manner.
