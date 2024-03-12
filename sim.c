@@ -898,10 +898,10 @@ BEGIN_OPERATOR(randomunique)
   PORT(0, 1, IN);          // Max
   PORT(1, 0, OUT);         // Output
   
-  // Initialize rand with current time if not already done
+  // Ensure rand is initialized
   static bool rand_initialized = false;
   if (!rand_initialized) {
-    srand((unsigned int)time(NULL)); // Corrected sign conversion warning
+    srand((unsigned int)time(NULL));
     rand_initialized = true;
   }
 
@@ -909,7 +909,7 @@ BEGIN_OPERATOR(randomunique)
   Glyph max_glyph = PEEK(0, 1);
   
   Usz min = (min_glyph == '.') ? 0 : index_of(min_glyph);
-  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // 35 corresponds to 'z', assuming base36
+  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // Assuming base36 for 'z'
   
   if (max < min) {
     Usz temp = max;
@@ -917,10 +917,10 @@ BEGIN_OPERATOR(randomunique)
     min = temp;
   }
 
-  Usz val = last_random_unique == UINT_MAX ? min : last_random_unique; // Handle UINT_MAX case
+  Usz val = (last_random_unique == UINT_MAX) ? min : last_random_unique;
   bool isUniqueFound = false;
 
-  for (Usz attempt = 0; attempt < 10; ++attempt) {
+  for (Usz attempt = 0; attempt < 10 && !isUniqueFound; ++attempt) {
     Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
     key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
     key += (key << UINT32_C(3));
@@ -928,42 +928,45 @@ BEGIN_OPERATOR(randomunique)
     key *= UINT32_C(0x27d4eb2d);
     key ^= (key >> UINT32_C(15));
     Usz potential_val = key % (max - min + 1) + min;
-    
+
     if (potential_val != last_random_unique) {
       val = potential_val;
       isUniqueFound = true;
-      break;
+    } else {
+      // Try ±2 or ±1 adjustments if direct random attempt fails
+      int adjustments[2] = {2, -2};
+      for (int i = 0; i < 2; ++i) {
+        int adjusted_val = (int)val + adjustments[i];
+        if (adjusted_val >= (int)min && adjusted_val <= (int)max && adjusted_val != (int)last_random_unique) {
+          val = (Usz)adjusted_val;
+          isUniqueFound = true;
+          break;
+        }
+      }
+      if (!isUniqueFound) {
+        // If ±2 adjustments fail, try ±1
+        adjustments[0] = 1;
+        adjustments[1] = -1;
+        for (int i = 0; i < 2; ++i) {
+          int adjusted_val = (int)val + adjustments[i];
+          if (adjusted_val >= (int)min && adjusted_val <= (int)max && adjusted_val != (int)last_random_unique) {
+            val = (Usz)adjusted_val;
+            isUniqueFound = true;
+            break;
+          }
+        }
+      }
     }
   }
 
   if (!isUniqueFound) {
-    // Adjust using random choice between +2, -2, +1, -1
-    int adjustments[4] = {2, -2, 1, -1};
-    int randomIndex = rand() % 4;
-    int adjustment = adjustments[randomIndex];
-    int potential_val_adjusted = (int)val + adjustment; // Perform operation in signed space
-    
-    // Check bounds and uniqueness after adjustment
-    if (potential_val_adjusted >= (int)min && potential_val_adjusted <= (int)max) {
-        Usz potential_val = (Usz)potential_val_adjusted; // Cast back to Usz
-        if (potential_val != last_random_unique) {
-            val = potential_val;
-            isUniqueFound = true;
-        }
-    }
-    
-    // Final fallback to last unique or min
-    if (!isUniqueFound) {
-      val = last_random_unique == UINT_MAX ? min : last_random_unique; // Fallback to last unique or min
-    }
+    // Fallback to last unique or min if last unique is UINT_MAX
+    val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
   }
 
   last_random_unique = val; // Update the last unique value
   POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
-
-
-
 
 
 
