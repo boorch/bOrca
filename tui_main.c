@@ -89,13 +89,14 @@ static Glyph_class glyph_class_of(Glyph glyph) {
   case '=':
   case '%':
   case '?':
-  case '^':
   case '$':
     return Glyph_class_lowercase;
   case '*':
     return Glyph_class_bang;
   case '#':
     return Glyph_class_comment;
+  case '^':
+    return Glyph_class_uppercase;
   }
   if (glyph >= 'A' && glyph <= 'Z')
     return Glyph_class_uppercase;
