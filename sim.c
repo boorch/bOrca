@@ -907,33 +907,39 @@ BEGIN_OPERATOR(randomunique)
     min = temp;
   }
 
-  Usz val = 0; // Default to 0 if no unique number is found
+  Usz val;
+  bool isUniqueFound = false;
 
-  // If min == max and it's not the same as the last unique value, just use it. 
-  // Otherwise, find a new unique value within the range
   if (min == max) {
-    val = (min != last_random_unique) ? min : 0;
+    val = (min != last_random_unique || min == 0) ? min : 0; // Use min if it's not last or if min itself is 0
+    isUniqueFound = true; // Avoid the uniqueness check if min == max
   } else {
-    // Attempt to find a unique value within a reasonable number of attempts
-    for (Usz attempt = 0; attempt < 10; ++attempt) {
+    for (Usz attempt = 0; attempt < 2; ++attempt) { // Just need two attempts max, as there are at least 3 options (1, 2, 3)
       Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
       key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
       key += (key << UINT32_C(3));
       key ^= (key >> UINT32_C(4));
       key *= UINT32_C(0x27d4eb2d);
       key ^= (key >> UINT32_C(15));
-      Usz potential_val = key % (max - min + 1) + min;
+      val = key % (max - min + 1) + min;
       
-      if (potential_val != last_random_unique) {
-        val = potential_val;
+      if (val != last_random_unique) {
+        isUniqueFound = true;
         break; // Found a suitable unique value
       }
     }
   }
 
+  if (!isUniqueFound) {
+    // This scenario should ideally never be hit given the logic above,
+    // but is here as a safeguard.
+    val = (min == 0) ? 1 : 0; // If somehow uniqueness isn't achieved, and min is 0, choose 1; otherwise, default to 0
+  }
+
   last_random_unique = val; // Update the last unique value
   POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
+
 
 
 
