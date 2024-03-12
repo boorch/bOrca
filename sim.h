@@ -8,5 +8,6 @@ void orca_run(Glyph *restrict gbuffer, Mark *restrict mbuffer, Usz height,
 
 // BOORCH
 extern Usz last_random_unique;
+void reset_last_unique_value(void);
 
 
