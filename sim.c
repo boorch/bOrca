@@ -917,6 +917,13 @@ BEGIN_OPERATOR(randomunique)
     min = temp;
   }
 
+  // If min and max are the same, we don't have to go through the 'attemps'. Hacky but a valid solution to an edge case.
+  if (min == max) {
+    POKE(1, 0, glyph_with_case(glyph_of(min), '0')); // Output the single possible value
+    last_random_unique = min; // Update the last unique value
+    return; // Exit the operator early
+  }
+
   Usz val = (last_random_unique == UINT_MAX) ? min : last_random_unique;
   bool isUniqueFound = false;
 
