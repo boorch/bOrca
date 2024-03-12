@@ -889,12 +889,22 @@ void reset_last_unique_value(void) {
     last_random_unique = UINT_MAX; // Reset the value
 }
 
+#include <stdlib.h> // For rand()
+#include <time.h>   // For time()
+
 BEGIN_OPERATOR(randomunique)
   LOWERCASE_REQUIRES_BANG;
   PORT(0, -1, IN | PARAM); // Min
   PORT(0, 1, IN);          // Max
   PORT(1, 0, OUT);         // Output
   
+  // Initialize rand with current time if not already done
+  static bool rand_initialized = false;
+  if (!rand_initialized) {
+    srand(time(NULL));
+    rand_initialized = true;
+  }
+
   Glyph min_glyph = PEEK(0, -1);
   Glyph max_glyph = PEEK(0, 1);
   
@@ -907,16 +917,10 @@ BEGIN_OPERATOR(randomunique)
     min = temp;
   }
 
-  Usz val;
-  
-  if (last_random_unique == UINT_MAX) { // Check if last_random_unique hasn't been set
-    val = min; // Use min as a safe starting point
-  } else {
-    val = last_random_unique; // Default to last unique value if no unique is found
-  }
-  
+  Usz val = last_random_unique;
   bool isUniqueFound = false;
-  for (Usz attempt = 0; attempt < 30; ++attempt) {
+
+  for (Usz attempt = 0; attempt < 10; ++attempt) {
     Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
     key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
     key += (key << UINT32_C(3));
@@ -926,20 +930,44 @@ BEGIN_OPERATOR(randomunique)
     Usz potential_val = key % (max - min + 1) + min;
     
     if (potential_val != last_random_unique) {
-      val = potential_val; // Found a unique value
+      val = potential_val;
       isUniqueFound = true;
       break;
     }
   }
 
   if (!isUniqueFound) {
-    // If no unique number found after 10 attempts, keep the last or default to 'min'
-    val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
+    // Try adjusting ±2 or ±1 within bounds, chosen randomly
+    int adjustments[4] = {2, -2, 1, -1};
+    int adjustment = adjustments[rand() % 4];
+    Usz potential_val = (int)val + adjustment;
+    if (adjustment == 2 || adjustment == -2) {
+      if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
+        val = potential_val;
+      } else {
+        // Try ±1 if ±2 out of bounds or equals last unique
+        adjustment = (rand() % 2 == 0) ? 1 : -1;
+        potential_val = (int)val + adjustment;
+        if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
+          val = potential_val;
+        }
+      }
+    } else {
+      if (potential_val >= min && potential_val <= max && potential_val != last_random_unique) {
+        val = potential_val;
+      }
+    }
+    
+    // If still no unique number found
+    if (!isUniqueFound) {
+      val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
+    }
   }
 
   last_random_unique = val; // Update the last unique value
   POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
 END_OPERATOR
+
 
 
 
