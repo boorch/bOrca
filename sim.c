@@ -1,6 +1,9 @@
 #include "sim.h"
 #include "gbuffer.h"
 
+// stored unique random value
+Usz last_random_unique = UINT_MAX;
+
 // Note Seuqnce
 static char note_sequence[] = "CcDdEFfGgAaB";
 
@@ -881,7 +884,6 @@ BEGIN_OPERATOR(midichord)
 END_OPERATOR
 
 // BOORCH's new Random Unique
-Usz last_random_unique = UINT_MAX;
 
 void reset_last_unique_value(void) {
     last_random_unique = UINT_MAX; // Reset the value
@@ -920,9 +922,9 @@ BEGIN_OPERATOR(randomunique)
     key = key * UINT32_C(0x27d4eb2d);
     key = key ^ (key >> UINT32_C(15));
     val = key % (max - min) + min;
-  } while (val == extra_params->last_random_unique);
+  } while (val == last_random_unique);
 
-  extra_params->last_random_unique = val; // Store the last generated value
+  last_random_unique = val; // Store the last generated value
   POKE(1, 0, glyph_with_case(glyph_of(val), gb));
 END_OPERATOR
 
