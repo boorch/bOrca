@@ -130,6 +130,7 @@ typedef struct {
   Glyph *vars_slots;
   Oevent_list *oevent_list;
   Usz random_seed;
+  Usz last_random_unique; // BOORCH
 } Oper_extra_params;
 
 static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
@@ -213,7 +214,8 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('=', osc)                                                                  \
   _('?', midipb)                                                               \
   _('^', scale)                                                                \
-  _('|', midichord)
+  _('|', midichord)                                                            \
+  _('$', randomunique)
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \
@@ -879,6 +881,45 @@ BEGIN_OPERATOR(midichord)
   PORT(0, 0, OUT);
 END_OPERATOR
 
+// BOORCH's new Random Unique
+BEGIN_OPERATOR(randomunique)
+  LOWERCASE_REQUIRES_BANG;
+  PORT(0, -1, IN | PARAM);
+  PORT(0, 1, IN);
+  PORT(1, 0, OUT);
+  Glyph gb = PEEK(0, 1);
+  Usz a = index_of(PEEK(0, -1));
+  Usz b = index_of(gb);
+  if (b == 0)
+    b = 36;
+  Usz min, max;
+  if (a == b) {
+    POKE(1, 0, glyph_of(a));
+    return;
+  } else if (a < b) {
+    min = a;
+    max = b;
+  } else {
+    min = b;
+    max = a;
+  }
+  // Repeat until a unique value is generated
+  Usz val;
+  do {
+    // Similar random number generation as in the original random operator
+    Usz key = (extra_params->random_seed + y * width + x) ^
+              (Tick_number << UINT32_C(16));
+    key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
+    key = key + (key << UINT32_C(3));
+    key = key ^ (key >> UINT32_C(4));
+    key = key * UINT32_C(0x27d4eb2d);
+    key = key ^ (key >> UINT32_C(15));
+    val = key % (max - min) + min;
+  } while (val == extra_params->last_random_unique);
+
+  extra_params->last_random_unique = val; // Store the last generated value
+  POKE(1, 0, glyph_with_case(glyph_of(val), gb));
+END_OPERATOR
 
 
 
@@ -893,6 +934,7 @@ void orca_run(Glyph *restrict gbuf, Mark *restrict mbuf, Usz height, Usz width,
   extras.vars_slots = &vars_slots[0];
   extras.oevent_list = oevent_list;
   extras.random_seed = random_seed;
+  extras.last_random_unique = UINT_MAX; // Resetting it for the new run
 
   for (Usz iy = 0; iy < height; ++iy) {
     Glyph const *glyph_row = gbuf + iy * width;
