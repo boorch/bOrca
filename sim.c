@@ -923,60 +923,84 @@ static size_t arpPatternLengths[] = {
 };
 
 BEGIN_OPERATOR(midiarpeggiator)
-  // Define input ports for arpeggio pattern, range, and current note position
-  PORT(0, -2, IN | PARAM); // Arpeggio Pattern Index
-  PORT(0, -1, IN | PARAM); // Note to play (based on selected arpeggio pattern's offset, not the note set in inputs 3,4,5)
-
-  // Manually define input ports for channel, octave, notes, velocity, and length
+  // Define input ports for pattern index, current note position, octave range and direction, and MIDI parameters
+  PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
+  PORT(0, -2, IN | PARAM); // Note to play (based on selected arpeggio pattern's offset)
+  PORT(0, -1, IN | PARAM); // Octave range and direction
+  
+  // Additional inputs for MIDI event
   PORT(0, 1, IN); // Channel
-  PORT(0, 2, IN); // Octave
+  PORT(0, 2, IN); // Base Octave
   PORT(0, 3, IN); // Note 1
   PORT(0, 4, IN); // Note 2
   PORT(0, 5, IN); // Note 3
   PORT(0, 6, IN); // Velocity
   PORT(0, 7, IN); // Length
+
   STOP_IF_NOT_BANGED;
 
-  // Variables for pattern index and note selection
-  Usz arp_pattern_index = index_of(PEEK(0, -2));
-  Usz current_position = index_of(PEEK(0, -1));
-  
-  // Determine the arpeggio pattern and its length
-  Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
+  Usz arp_pattern_index = index_of(PEEK(0, -3));
+  Usz current_position = index_of(PEEK(0, -2));
+  Glyph octave_range_glyph = PEEK(0, -1);
+  Usz octave_range_index = index_of(octave_range_glyph);
+
+  // Determine octave span and direction
+  bool direction_down = false;
+  Usz octave_span = 1;
+  if (octave_range_index <= 4) {
+    octave_span = octave_range_index + 1;
+  } else if (octave_range_index >= 0x11 && octave_range_index <= 0x14) { // 'g' to 'j'
+    direction_down = true;
+    octave_span = octave_range_index - 0x10;
+  } else if (octave_range_index >= 5 && octave_range_index <= 0x15) {
+    octave_span = 5; // Clamp values '5' to 'f' and beyond 'j' to 5 octaves upwards
+  }
+
+  // Get pattern length and current octave
   size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
+  Usz total_notes = pattern_length * octave_span; // Total notes to cycle through all octaves
 
-  // Calculate the current position within the pattern
-  current_position = current_position % pattern_length;
+  // Calculate current note in pattern and adjust octave if necessary
+  Usz base_octave = index_of(PEEK(0, 2));
+  Usz current_octave = base_octave;
+  Usz note_in_pattern_index;
+  if (!direction_down) {
+    current_octave += (current_position / pattern_length) % octave_span;
+    note_in_pattern_index = current_position % pattern_length;
+  } else {
+    current_octave += octave_span - 1 - ((current_position / pattern_length) % octave_span);
+    note_in_pattern_index = pattern_length - 1 - (current_position % pattern_length);
+  }
 
-  // Get the MIDI note to play from the current position in the pattern
-  Usz note_to_play_index = current_pattern[current_position] - 1;
+  // Ensure current_octave is within MIDI limits
+  if (current_octave > 9) current_octave = 9;
+
+  // Select the note to play from the pattern
+  Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
+  Usz note_to_play_index = current_pattern[note_in_pattern_index] - 1; // 1-based to 0-based index
   
-  // Channel, octave, velocity, and length processing
+  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
+  U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
+  if (note_num == UINT8_MAX) return; // Skip if invalid note
+
+  // Channel, velocity, and length
   U8 channel = (U8)index_of(PEEK(0, 1));
-  U8 base_octave = (U8)index_of(PEEK(0, 2));
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-  // Get the MIDI note number from the selected note
-  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-  U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
-  
-  // Calculate MIDI note considering octave and validate range
-  int midi_note_calc = note_num + base_octave * 12;
-  if (midi_note_calc >= 0 && midi_note_calc <= 127) {
-    U8 midi_note = (U8)midi_note_calc;
-    // Send MIDI note event if valid
-    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-    oe->oevent_type = Oevent_type_midi_note;
-    oe->channel = channel;
-    oe->note = midi_note;
-    oe->velocity = velocity;
-    oe->duration = (U8)(length & 0x7F);
-    oe->mono = 0;
-  }
+  // Send MIDI note event
+  Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+  oe->oevent_type = Oevent_type_midi_note;
+  oe->channel = channel;
+  oe->octave = (U8)current_octave;
+  oe->note = note_num;
+  oe->velocity = velocity;
+  oe->duration = (U8)(length & 0x7F);
+  oe->mono = 0;
 
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
+
 
 
 // BOORCH's new Random Unique
