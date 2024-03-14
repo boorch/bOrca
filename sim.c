@@ -886,7 +886,7 @@ BEGIN_OPERATOR(midichord)
       oe->octave = (U8)this_octave;
       oe->note = note_num;
       oe->velocity = velocity;
-      oe->duration = length;
+      oe->duration = (U8)(length & 0x7F);
       oe->mono = 0;
     }
   }
