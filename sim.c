@@ -958,7 +958,6 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   // Get pattern length and current octave
   size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
-  Usz total_notes = pattern_length * octave_span; // Total notes to cycle through all octaves
 
   // Calculate current note in pattern and adjust octave if necessary
   Usz base_octave = index_of(PEEK(0, 2));
