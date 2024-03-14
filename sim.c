@@ -937,41 +937,42 @@ BEGIN_OPERATOR(midiarpeggiator)
   PORT(0, 7, IN); // Length
   STOP_IF_NOT_BANGED;
 
-  // Variables for pattern index, range, and note selection
-  Usz arp_pattern_index = index_of(PEEK(0, -3));
-  Usz note_selection = index_of(PEEK(0, -1));
+  // Variables for pattern index and note selection
+  Usz arp_pattern_index = index_of(PEEK(0, -2));
+  Usz current_position = index_of(PEEK(0, -1));
   
-  // Reintegrate the arpPatterns and arpPatternLengths usage
-  Usz* current_pattern = arpPatterns[arp_pattern_index % sizeof(arpPatterns) / sizeof(arpPatterns[0])];
-  size_t pattern_length = arpPatternLengths[arp_pattern_index % sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0])];
+  // Determine the arpeggio pattern and its length
+  Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
+  size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
+
+  // Calculate the current position within the pattern
+  current_position = current_position % pattern_length;
+
+  // Get the MIDI note to play from the current position in the pattern
+  Usz note_to_play_index = current_pattern[current_position] - 1;
   
-  // Calculate the note to play based on the pattern and the note selection
-  Usz pattern_note_index = current_pattern[note_selection % pattern_length] - 1;
-  
-  // Gather channel, octave, velocity, length
+  // Channel, octave, velocity, and length processing
   U8 channel = (U8)index_of(PEEK(0, 1));
   U8 base_octave = (U8)index_of(PEEK(0, 2));
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
-  
-  // Note processing to get MIDI note numbers
+
+  // Get the MIDI note number from the selected note
   Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-  U8 note_num = midi_note_number_of(note_gs[pattern_note_index]);
+  U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
   
   // Calculate MIDI note considering octave and validate range
   int midi_note_calc = note_num + base_octave * 12;
   if (midi_note_calc >= 0 && midi_note_calc <= 127) {
-      U8 midi_note = (U8)midi_note_calc;
-      // Send MIDI note event
-    if (midi_note < 128 && note_num != UINT8_MAX) { // Valid note check
-      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = channel;
-      oe->note = midi_note;
-      oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F);
-      oe->mono = 0;
-    }
+    U8 midi_note = (U8)midi_note_calc;
+    // Send MIDI note event if valid
+    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = channel;
+    oe->note = midi_note;
+    oe->velocity = velocity;
+    oe->duration = (U8)(length & 0x7F);
+    oe->mono = 0;
   }
 
   PORT(0, 0, OUT); // Mark output to indicate operation
