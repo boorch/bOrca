@@ -842,6 +842,7 @@ END_OPERATOR
 
 
 //BOORCH's new Midichord OP
+//BOORCH's new Midichord OP
 BEGIN_OPERATOR(midichord)
   for (Usz i = 1; i < 8; ++i) {
     PORT(0, (Isz)i, IN);
@@ -859,31 +860,33 @@ BEGIN_OPERATOR(midichord)
   
   if (channel > 15) return;
 
-  U8 last_note_num = 0xFF; // Initially invalid
-  int octave_increment = 0;
+  U8 last_note_num = 0xFF; // Initially invalid to ensure first note does not increment octave
+  int octave_increment = 0; // Track the octave increment
 
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num != UINT8_MAX) { // Note is valid
-      if (note_num == last_note_num) {
-        octave_increment++;
-      } else {
-        octave_increment = 0;
-      }
-      last_note_num = note_num;
+    if (note_num == last_note_num) {
+      // Only increment octave if this note is the same as the last
+      octave_increment++;
+    } else {
+      // Reset the octave increment if this note is different
+      octave_increment = 0;
+    }
+    last_note_num = note_num; // Update last note to current for next iteration comparison
 
+    if (note_num != UINT8_MAX) { // Note is valid
       int this_octave = base_octave + octave_increment;
-      if (this_octave > 9 || this_octave < 0) continue; // Ensure within MIDI bounds
+      if (this_octave > 9) continue; // Skip notes with octaves out of MIDI bounds
 
       U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
       
       Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
       oe->channel = (U8)channel;
-      oe->octave = (U8)this_octave; // Ensure within bounds
+      oe->octave = (U8)this_octave;
       oe->note = note_num;
       oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F);
+      oe->duration = length;
       oe->mono = 0;
     }
   }
@@ -891,8 +894,8 @@ BEGIN_OPERATOR(midichord)
   PORT(0, 0, OUT);
 END_OPERATOR
 
-// BOORCH's new Random Unique
 
+// BOORCH's new Random Unique
 void reset_last_unique_value(void) {
     last_random_unique = UINT_MAX; // Reset the value
 }
