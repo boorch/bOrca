@@ -141,3 +141,6 @@ Each pattern is defined by a sequence of steps that dictate the order of arpeggi
 
 To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeggiator operator (`&`). The `Note to Play` input determines which step in the selected pattern to play, allowing the sequence to progress. Suggestions: Connect `Note to Play` to a Clock operator, or a Track operator, or a Random Unique operator for complex and/or unexpected patterns.
 
+*IMPORTANT: You may want to avoid using an index value greater than 9 for `Arp Pattern` since it "wraps around" (e.g: "a" is "0"). So in the very likely case of me adding new arp patterns for a future update, any index you set above 9 (as of now) may result in playing a different pattern.*
+
+
