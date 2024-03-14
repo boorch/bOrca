@@ -926,7 +926,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   PORT(0, -2, IN | PARAM); // Arpeggio Pattern Index
   PORT(0, -1, IN | PARAM); // Arpeggio Range
   for (Usz i = 1; i <= 5; ++i) { // Inputs for channel, octave, three notes
-    PORT(0, i, IN);
+    PORT(0, (Isz)i, IN);
   }
   PORT(0, 6, IN); // Velocity
   PORT(0, 7, IN); // Length
@@ -959,22 +959,24 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   // Arpeggio processing and MIDI note events sending
   for (Usz range_step = 0; range_step <= arp_range; ++range_step) {
-    for (size_t pattern_step = 0; pattern_step < pattern_length; ++pattern_step) {
-      Usz pattern_note_index = current_pattern[pattern_step] - 1;
-      if (pattern_note_index < 3 && note_numbers[pattern_note_index] != UINT8_MAX) {
-        U8 midi_note = note_numbers[pattern_note_index] + (base_octave + range_step) * 12;
-        if (midi_note < 128) { // Ensure the MIDI note is within a valid range
-          // Send MIDI note event
-          Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-          oe->oevent_type = Oevent_type_midi_note;
-          oe->channel = channel;
-          oe->note = midi_note;
-          oe->velocity = velocity;
-          oe->duration = (U8)(length & 0x7F);
-          oe->mono = 0;
-        }
+      for (size_t pattern_step = 0; pattern_step < pattern_length; ++pattern_step) {
+          Usz pattern_note_index = current_pattern[pattern_step] - 1;
+          if (pattern_note_index < 3 && note_numbers[pattern_note_index] != UINT8_MAX) {
+              // Calculate the MIDI note considering octave and range. Constrain within 0-127.
+              int midi_note_calc = note_numbers[pattern_note_index] + (int)(base_octave + range_step) * 12;
+              if (midi_note_calc > 127) midi_note_calc = 127; // Ensure the note is within MIDI range
+              U8 midi_note = (U8)midi_note_calc;
+  
+              // Send MIDI note event
+              Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+              oe->oevent_type = Oevent_type_midi_note;
+              oe->channel = channel;
+              oe->note = midi_note;
+              oe->velocity = velocity;
+              oe->duration = (U8)(length & 0x7F);
+              oe->mono = 0;
+          }
       }
-    }
   }
 
   PORT(0, 0, OUT); // Mark output to indicate operation
