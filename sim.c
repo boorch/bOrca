@@ -938,26 +938,34 @@ BEGIN_OPERATOR(midiarpeggiator)
   PORT(0, 7, IN); // Length
   STOP_IF_NOT_BANGED;
 
-  // Gather the input values
+  // Variables for pattern index, range, and note selection
   Usz arp_pattern_index = index_of(PEEK(0, -3));
   Usz arp_range = index_of(PEEK(0, -2));
-  Usz note_to_play_index = index_of(PEEK(0, -1)); // This is now directly determining which note to play based on the pattern
-
-  // Channel, octave, velocity, and length processing
+  Usz note_selection = index_of(PEEK(0, -1));
+  
+  // Reintegrate the arpPatterns and arpPatternLengths usage
+  Usz* current_pattern = arpPatterns[arp_pattern_index % sizeof(arpPatterns) / sizeof(arpPatterns[0])];
+  size_t pattern_length = arpPatternLengths[arp_pattern_index % sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0])];
+  
+  // Calculate the note to play based on the pattern and the note selection
+  Usz pattern_note_index = current_pattern[note_selection % pattern_length] - 1;
+  
+  // Gather channel, octave, velocity, length
   U8 channel = (U8)index_of(PEEK(0, 1));
   U8 base_octave = (U8)index_of(PEEK(0, 2));
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
-
-  // Note processing, select the MIDI note to play based on the pattern
-  Glyph note_glyph = PEEK(0, (Isz)3 + (Isz)note_to_play_index);
-  U8 note_num = midi_note_number_of(note_glyph);
-
-  // Calculate MIDI note number with octave adjustments
+  
+  // Note processing to get MIDI note numbers
+  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
+  U8 note_num = midi_note_number_of(note_gs[pattern_note_index]);
+  
+  // Calculate MIDI note considering octave and validate range
   int midi_note_calc = note_num + base_octave * 12;
-  if (midi_note_calc < 0) midi_note_calc = 0;
-  if (midi_note_calc > 127) midi_note_calc = 127; // Clamp to valid MIDI range
-  U8 midi_note = (U8)midi_note_calc;
+  if (midi_note_calc >= 0 && midi_note_calc <= 127) {
+      U8 midi_note = (U8)midi_note_calc;
+      // Send MIDI note event
+  }
 
   // Send MIDI note event
   if (midi_note < 128 && note_num != UINT8_MAX) { // Valid note check
