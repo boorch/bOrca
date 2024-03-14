@@ -885,9 +885,10 @@ BEGIN_OPERATOR(midichord)
     oe->velocity = velocity;
     oe->duration = (U8)(length & 0x7F);
     oe->mono = 0;
+    
+    PORT(0, 0, OUT);
   }
 
-  PORT(0, 0, OUT);
 END_OPERATOR
 
 // BOORCH's new MidiArpeggiator
@@ -922,10 +923,11 @@ static size_t arpPatternLengths[] = {
 };
 
 BEGIN_OPERATOR(midiarpeggiator)
-  // Define input ports for arpeggio pattern and range
-  PORT(0, -2, IN | PARAM); // Arpeggio Pattern Index
-  PORT(0, -1, IN | PARAM); // Arpeggio Range
-  
+  // Define input ports for arpeggio pattern, range, and current note position
+  PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
+  PORT(0, -2, IN | PARAM); // Arpeggio Range
+  PORT(0, -1, IN | PARAM); // Current position in the arpeggio pattern to play
+
   // Manually define input ports for channel, octave, notes, velocity, and length
   PORT(0, 1, IN); // Channel
   PORT(0, 2, IN); // Octave
@@ -936,61 +938,46 @@ BEGIN_OPERATOR(midiarpeggiator)
   PORT(0, 7, IN); // Length
   STOP_IF_NOT_BANGED;
 
-  Glyph arp_pattern_index_glyph = PEEK(0, -2);
-  Glyph arp_range_glyph = PEEK(0, -1);
-  Usz arp_pattern_index = index_of(arp_pattern_index_glyph);
-  Usz arp_range = index_of(arp_range_glyph);
+  // Gather the input values
+  Usz arp_pattern_index = index_of(PEEK(0, -3));
+  Usz arp_range = index_of(PEEK(0, -2));
+  Usz current_position = index_of(PEEK(0, -1)); // Current position in the pattern
 
-  // Determine the arpeggio pattern and its length
+  // Arpeggio pattern and length determination
   Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
   size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
 
-  Glyph channel_glyph = PEEK(0, 1);
-  Glyph octave_glyph = PEEK(0, 2);
-  U8 channel = (U8)index_of(channel_glyph);
-  U8 base_octave = (U8)index_of(octave_glyph);
+  // Ensure the current position is within the pattern's length
+  current_position = current_position % pattern_length;
 
-  // Gather note glyphs directly as done in midichord
-  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-  
-  // Initialize note numbers array with invalid MIDI note numbers
-  U8 note_numbers[3] = {UINT8_MAX, UINT8_MAX, UINT8_MAX};
-  
-  // Convert glyphs to MIDI note numbers if they're not '.'
-  for (int i = 0; i < 3; i++) {
-      if (note_gs[i] != '.') {
-          note_numbers[i] = midi_note_number_of(note_gs[i]);
-      }
-  }
+  // Get the MIDI note to play from the current position in the pattern
+  Usz note_to_play = current_pattern[current_position] - 1; // Adjusted for zero-based index
 
+  // Channel, octave, velocity, and length processing
+  U8 channel = (U8)index_of(PEEK(0, 1));
+  U8 base_octave = (U8)index_of(PEEK(0, 2));
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-  // Arpeggio processing and MIDI note events sending
-  for (Usz range_step = 0; range_step <= arp_range; ++range_step) {
-      for (size_t pattern_step = 0; pattern_step < pattern_length; ++pattern_step) {
-          Usz pattern_note_index = current_pattern[pattern_step] - 1;
-          if (pattern_note_index < 3 && note_numbers[pattern_note_index] != UINT8_MAX) {
-              // Calculate the MIDI note considering octave and range. Constrain within 0-127.
-              int midi_note_calc = note_numbers[pattern_note_index] + (int)(base_octave + range_step) * 12;
-              if (midi_note_calc > 127) midi_note_calc = 127; // Ensure the note is within MIDI range
-              U8 midi_note = (U8)midi_note_calc;
-  
-              // Send MIDI note event
-              Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-              oe->oevent_type = Oevent_type_midi_note;
-              oe->channel = channel;
-              oe->note = midi_note;
-              oe->velocity = velocity;
-              oe->duration = (U8)(length & 0x7F);
-              oe->mono = 0;
-          }
-      }
+  // Note processing
+  Glyph note_glyph = PEEK(0, 3 + note_to_play); // Get the note from the correct input based on the pattern
+  if (note_glyph != '.') {
+    U8 note_num = midi_note_number_of(note_glyph);
+    U8 midi_note = note_num + base_octave * 12; // Calculate MIDI note number
+    if (midi_note < 128) { // Check MIDI note range
+      // Send MIDI note event
+      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = channel;
+      oe->note = midi_note;
+      oe->velocity = velocity;
+      oe->duration = (U8)(length & 0x7F);
+      oe->mono = 0;
+    }
   }
 
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
-
 
 
 // BOORCH's new Random Unique
