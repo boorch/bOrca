@@ -842,7 +842,6 @@ END_OPERATOR
 
 
 //BOORCH's new Midichord OP
-//BOORCH's new Midichord OP
 BEGIN_OPERATOR(midichord)
   for (Usz i = 1; i < 8; ++i) {
     PORT(0, (Isz)i, IN);
@@ -860,39 +859,36 @@ BEGIN_OPERATOR(midichord)
   
   if (channel > 15) return;
 
-  U8 last_note_num = 0xFF; // Initially invalid to ensure first note does not increment octave
-  int octave_increment = 0; // Track the octave increment
+  int last_note_absolute = -1; // Store the absolute midi note number of the last note
 
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num == last_note_num) {
-      // Only increment octave if this note is the same as the last
-      octave_increment++;
-    } else {
-      // Reset the octave increment if this note is different
-      octave_increment = 0;
-    }
-    last_note_num = note_num; // Update last note to current for next iteration comparison
+    if (note_num == UINT8_MAX) continue; // Skip invalid notes
 
-    if (note_num != UINT8_MAX) { // Note is valid
-      int this_octave = base_octave + octave_increment;
-      if (this_octave > 9) continue; // Skip notes with octaves out of MIDI bounds
-
-      U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-      
-      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = (U8)channel;
-      oe->octave = (U8)this_octave;
-      oe->note = note_num;
-      oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F);
-      oe->mono = 0;
+    int note_absolute = base_octave * 12 + note_num; // Calculate the absolute midi note number
+    if (note_absolute <= last_note_absolute) {
+      // Ensure each note is higher than the previous
+      base_octave = (last_note_absolute / 12) + 1;
     }
+    last_note_absolute = base_octave * 12 + note_num; // Update for the next iteration
+    
+    if (base_octave > 9) continue; // Skip notes with octaves out of MIDI bounds
+
+    U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+    
+    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = (U8)channel;
+    oe->octave = (U8)base_octave;
+    oe->note = note_num;
+    oe->velocity = velocity;
+    oe->duration = (U8)(length & 0x7F);
+    oe->mono = 0;
   }
 
   PORT(0, 0, OUT);
 END_OPERATOR
+
 
 
 // BOORCH's new Random Unique
