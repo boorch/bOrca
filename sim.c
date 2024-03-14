@@ -903,12 +903,36 @@ static Usz arp06[] = {1, 2, 3, 2}; // up bounce triangle
 static Usz arp07[] = {3, 2, 1, 2}; // down bounce triangle
 static Usz arp08[] = {1, 2, 3, 3, 2, 1}; // up bounce sine
 static Usz arp09[] = {3, 2, 1, 1, 2, 3}; // down bounce sine
+static Usz arp10[] = {1, 2, 3, 0}; // up with rest
+static Usz arp11[] = {3, 2, 1, 0}; // down with rest
+static Usz arp12[] = {1, 3, 2, 0}; // converge up with rest
+static Usz arp13[] = {3, 1, 2, 0}; // converge down with rest
+static Usz arp14[] = {2, 1, 3, 0}; // diverge up with rest
+static Usz arp15[] = {2, 3, 1, 0}; // diverge down with rest
+static Usz arp16[] = {1, 2, 3, 2, 0}; // up bounce triangle with rest
+static Usz arp17[] = {3, 2, 1, 2, 0}; // down bounce triangle with rest
+static Usz arp18[] = {1, 0, 2, 3, 0}; // riff
+static Usz arp19[] = {1, 0, 3, 2, 0}; // riff
+static Usz arp20[] = {1, 2, 0, 3, 0}; // riff
+static Usz arp21[] = {1, 3, 0, 2, 0}; // riff
+static Usz arp22[] = {1, 2, 0, 1, 3}; // riff
+static Usz arp23[] = {1, 3, 0, 1, 2}; // riff
+static Usz arp24[] = {1, 2, 0, 1, 3, 0}; // riff
+static Usz arp25[] = {1, 0, 2, 1, 0, 3}; // riff
+static Usz arp26[] = {1, 0, 3, 1, 0, 2}; // riff
 
+
+// Arpeggio pattern pointers
 static Usz* arpPatterns[] = {
     arp00, arp01, arp02, arp03, arp04,
-    arp05, arp06, arp07, arp08, arp09
+    arp05, arp06, arp07, arp08, arp09,
+    arp10, arp11, arp12, arp13, arp14,
+    arp15, arp16, arp17, arp18, arp19,
+    arp20, arp21, arp22, arp23, arp24,
+    arp25, arp26
 };
 
+// Lengths of each arpeggio pattern
 static size_t arpPatternLengths[] = {
     sizeof(arp00) / sizeof(arp00[0]),
     sizeof(arp01) / sizeof(arp01[0]),
@@ -919,8 +943,26 @@ static size_t arpPatternLengths[] = {
     sizeof(arp06) / sizeof(arp06[0]),
     sizeof(arp07) / sizeof(arp07[0]),
     sizeof(arp08) / sizeof(arp08[0]),
-    sizeof(arp09) / sizeof(arp09[0])
+    sizeof(arp09) / sizeof(arp09[0]),
+    sizeof(arp10) / sizeof(arp10[0]),
+    sizeof(arp11) / sizeof(arp11[0]),
+    sizeof(arp12) / sizeof(arp12[0]),
+    sizeof(arp13) / sizeof(arp13[0]),
+    sizeof(arp14) / sizeof(arp14[0]),
+    sizeof(arp15) / sizeof(arp15[0]),
+    sizeof(arp16) / sizeof(arp16[0]),
+    sizeof(arp17) / sizeof(arp17[0]),
+    sizeof(arp18) / sizeof(arp18[0]),
+    sizeof(arp19) / sizeof(arp19[0]),
+    sizeof(arp20) / sizeof(arp20[0]),
+    sizeof(arp21) / sizeof(arp21[0]),
+    sizeof(arp22) / sizeof(arp22[0]),
+    sizeof(arp23) / sizeof(arp23[0]),
+    sizeof(arp24) / sizeof(arp24[0]),
+    sizeof(arp25) / sizeof(arp25[0]),
+    sizeof(arp26) / sizeof(arp26[0])
 };
+
 
 BEGIN_OPERATOR(midiarpeggiator)
   // Define input ports for pattern index, current note position, octave range and direction, and MIDI parameters
@@ -983,8 +1025,8 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   // Select the note to play from the pattern
   Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
-  Usz note_to_play_index = current_pattern[note_in_pattern_index] - 1; // 1-based to 0-based index
-  
+  Usz note_to_play_index = current_pattern[note_in_pattern_index] - 1; // Adjusted for 0-based index
+ 
   Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
   U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
   if (note_num == UINT8_MAX) return; // Skip if invalid note
@@ -994,17 +1036,34 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-  // Send MIDI note event
-  Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-  oe->oevent_type = Oevent_type_midi_note;
-  oe->channel = channel;
-  oe->octave = (U8)current_octave;
-  oe->note = note_num;
-  oe->velocity = velocity;
-  oe->duration = (U8)(length & 0x7F);
-  oe->mono = 0;
-
-  PORT(0, 0, OUT); // Mark output to indicate operation
+  // Before sending the MIDI note, check if the note to play is a rest (0)
+  if(note_to_play_index == (Usz)-1) { // Check for '0', adjusted for 0-based index
+      // It's a rest, so don't play a note. You can return early or continue the loop
+      // Ensure timing is maintained but skip the MIDI note sending for this cycle
+      PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
+      return; // Skip this iteration, ensuring a rest
+  } else {
+      // Normal note playing logic
+      Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
+      U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
+      if (note_num == UINT8_MAX) return; // Skip if invalid note
+  
+      // Prepare and send MIDI note as usual
+      U8 channel = (U8)index_of(PEEK(0, 1));
+      U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
+      U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
+  
+      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = channel;
+      oe->octave = (U8)current_octave; // Maintained from last note
+      oe->note = note_num;
+      oe->velocity = velocity;
+      oe->duration = length;
+      oe->mono = 0;
+  
+      PORT(0, 0, OUT); // Mark output to indicate operation
+  }
 END_OPERATOR
 
 
