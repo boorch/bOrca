@@ -921,32 +921,36 @@ static size_t arpPatternLengths[] = {
     sizeof(arp09) / sizeof(arp09[0])
 };
 
-
 BEGIN_OPERATOR(midiarpeggiator)
-  // Input Ports: Arpeggio Pattern Index and Range
-  PORT(-2, 0, IN | PARAM);
-  PORT(-1, 0, IN | PARAM);
+  // Input Ports for additional parameters: Arpeggio Pattern and Range
+  PORT(-2, 0, IN | PARAM); // Arpeggio Pattern Index
+  PORT(-1, 0, IN | PARAM); // Arpeggio Range
   
-  // Note Inputs, Velocity, and Length Inputs
-  for (Usz i = 1; i <= 5; ++i) {
-    PORT(0, (Isz)i, IN); // Casting Usz to Isz where required
+  // Note Inputs
+  for (Isz i = 1; i <= 3; ++i) { // Casting to Isz for consistency
+    PORT(0, i, IN);
   }
+  // Velocity and Length Inputs
+  PORT(0, 4, IN);
+  PORT(0, 5, IN);
   STOP_IF_NOT_BANGED;
 
   Glyph arp_pattern_index_glyph = PEEK(-2, 0);
   Glyph arp_range_glyph = PEEK(-1, 0);
   Usz arp_pattern_index = index_of(arp_pattern_index_glyph);
-  Usz arp_range = index_of(arp_range_glyph) + 1; // Ensuring arp_range is at least 1
+  Usz arp_range = index_of(arp_range_glyph);
 
+  // Determine the arpeggio pattern and its length, using safe casts
   Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
   size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
 
   Glyph channel_glyph = PEEK(0, 1);
   Usz channel = index_of(channel_glyph);
 
+  // Process Notes, handle arrays carefully
   U8 note_numbers[3] = {UINT8_MAX, UINT8_MAX, UINT8_MAX};
-  for (Usz i = 0; i < 3; ++i) {
-    Glyph note_glyph = PEEK(0, i + 1);
+  for (Isz i = 0; i < 3; ++i) {
+    Glyph note_glyph = PEEK(0, i + 1); // Use casting where necessary
     if (note_glyph != '.') {
       note_numbers[i] = midi_note_number_of(note_glyph);
     }
@@ -960,8 +964,9 @@ BEGIN_OPERATOR(midiarpeggiator)
     for (size_t pattern_step = 0; pattern_step < pattern_length; ++pattern_step) {
       Usz pattern_note_index = current_pattern[pattern_step] - 1;
       if (pattern_note_index < 3 && note_numbers[pattern_note_index] != UINT8_MAX) {
+        // Calculate MIDI note considering octave range
         int midi_note_int = note_numbers[pattern_note_index] + (int)(range_step * 12);
-        if (midi_note_int >= 0 && midi_note_int <= 127) {
+        if (midi_note_int < 128 && midi_note_int >= 0) { // Ensure valid MIDI note number and range
           U8 midi_note = (U8)midi_note_int;
           Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
           oe->oevent_type = Oevent_type_midi_note;
@@ -977,8 +982,6 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
-
-
 
 
 // BOORCH's new Random Unique
