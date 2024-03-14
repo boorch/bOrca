@@ -140,25 +140,23 @@ To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeg
 | 7             | 3, 2, 1, 2           | Down bounce triangle      |
 | 8             | 1, 2, 3, 3, 2, 1     | Up bounce sine            |
 | 9             | 3, 2, 1, 1, 2, 3     | Down bounce sine          |
-| 10            | 1, 2, 3, 0           | Up with rest              |
-| 11            | 3, 2, 1, 0           | Down with rest            |
-| 12            | 1, 3, 2, 0           | Converge up with rest     |
-| 13            | 3, 1, 2, 0           | Converge down with rest   |
-| 14            | 2, 1, 3, 0           | Diverge up with rest      |
-| 15            | 2, 3, 1, 0           | Diverge down with rest    |
-| 16            | 1, 2, 3, 2, 0        | Up bounce triangle with rest |
-| 17            | 3, 2, 1, 2, 0        | Down bounce triangle with rest |
-| 18            | 1, 0, 2, 3, 0        | Riff with rests           |
-| 19            | 1, 0, 3, 2, 0        | Alternate riff with rests |
-| 20            | 1, 2, 0, 3, 0        | Riff variation with rests |
-| 21            | 1, 3, 0, 2, 0        | Another riff variation with rests |
-| 22            | 1, 2, 0, 1, 3        | Riff with internal rest   |
-| 23            | 1, 3, 0, 1, 2        | Riff alternate with internal rest |
-| 24            | 1, 2, 0, 1, 3, 0     | Extended riff with rests  |
-| 25            | 1, 0, 2, 1, 0, 3     | Complex riff with rests   |
-| 26            | 1, 0, 3, 1, 0, 2     | Complex alternate riff with rests |
-
-
+| a             | 1, 2, 3, 0           | Up with rest              |
+| b             | 3, 2, 1, 0           | Down with rest            |
+| c             | 1, 3, 2, 0           | Converge up with rest     |
+| d             | 3, 1, 2, 0           | Converge down with rest   |
+| e             | 2, 1, 3, 0           | Diverge up with rest      |
+| f             | 2, 3, 1, 0           | Diverge down with rest    |
+| g             | 1, 2, 3, 2, 0        | Up bounce triangle with rest |
+| h             | 3, 2, 1, 2, 0        | Down bounce triangle with rest |
+| i             | 1, 0, 2, 3, 0        | Riff with rests           |
+| j             | 1, 0, 3, 2, 0        | Alternate riff with rests |
+| k             | 1, 2, 0, 3, 0        | Riff variation with rests |
+| l             | 1, 3, 0, 2, 0        | Another riff variation with rests |
+| m             | 1, 2, 0, 1, 3        | Riff with internal rest   |
+| n             | 1, 3, 0, 1, 2        | Riff alternate with internal rest |
+| o             | 1, 2, 0, 1, 3, 0     | Extended riff with rests  |
+| p             | 1, 0, 2, 1, 0, 3     | Complex riff with rests   |
+| q             | 1, 0, 3, 1, 0, 2     | Complex alternate riff with rests |
 
 
 *IMPORTANT: Arp patterns `0` to `9` are most likely to be permanent. You can come up with complex sequences using only them and banging the operator in various timings. But the patterns `a` and above are just some experimental combinations and they're likely to change in future updates.
