@@ -926,7 +926,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   // Define input ports for arpeggio pattern, range, and current note position
   PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
   PORT(0, -2, IN | PARAM); // Arpeggio Range
-  PORT(0, -1, IN | PARAM); // Current position in the arpeggio pattern to play
+  PORT(0, -1, IN | PARAM); // Note to play (based on selected arpeggio pattern's offset, not the note set in inputs 3,4,5)
 
   // Manually define input ports for channel, octave, notes, velocity, and length
   PORT(0, 1, IN); // Channel
@@ -941,17 +941,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   // Gather the input values
   Usz arp_pattern_index = index_of(PEEK(0, -3));
   Usz arp_range = index_of(PEEK(0, -2));
-  Usz current_position = index_of(PEEK(0, -1)); // Current position in the pattern
-
-  // Arpeggio pattern and length determination
-  Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
-  size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
-
-  // Ensure the current position is within the pattern's length
-  current_position = current_position % pattern_length;
-
-  // Get the MIDI note to play from the current position in the pattern
-  Usz note_to_play = current_pattern[current_position] - 1; // Adjusted for zero-based index
+  Usz note_to_play_index = index_of(PEEK(0, -1)); // This is now directly determining which note to play based on the pattern
 
   // Channel, octave, velocity, and length processing
   U8 channel = (U8)index_of(PEEK(0, 1));
@@ -959,21 +949,25 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-  // Note processing
-  Glyph note_glyph = PEEK(0, 3 + note_to_play); // Get the note from the correct input based on the pattern
-  if (note_glyph != '.') {
-    U8 note_num = midi_note_number_of(note_glyph);
-    U8 midi_note = note_num + base_octave * 12; // Calculate MIDI note number
-    if (midi_note < 128) { // Check MIDI note range
-      // Send MIDI note event
-      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = channel;
-      oe->note = midi_note;
-      oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F);
-      oe->mono = 0;
-    }
+  // Note processing, select the MIDI note to play based on the pattern
+  Glyph note_glyph = PEEK(0, (Isz)3 + (Isz)note_to_play_index);
+  U8 note_num = midi_note_number_of(note_glyph);
+
+  // Calculate MIDI note number with octave adjustments
+  int midi_note_calc = note_num + base_octave * 12;
+  if (midi_note_calc < 0) midi_note_calc = 0;
+  if (midi_note_calc > 127) midi_note_calc = 127; // Clamp to valid MIDI range
+  U8 midi_note = (U8)midi_note_calc;
+
+  // Send MIDI note event
+  if (midi_note < 128 && note_num != UINT8_MAX) { // Valid note check
+    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = channel;
+    oe->note = midi_note;
+    oe->velocity = velocity;
+    oe->duration = (U8)(length & 0x7F);
+    oe->mono = 0;
   }
 
   PORT(0, 0, OUT); // Mark output to indicate operation
