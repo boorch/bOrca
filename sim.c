@@ -1036,30 +1036,30 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-    // Before sending the MIDI note, check if the note to play is a rest (0)
-    if(note_to_play_index == (Usz)-1) { // If it's a rest
-        PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
-        return; // Skip this iteration, ensuring a rest
-    }
-    
-    // Use previously declared variables without re-declaration
-    note_num = midi_note_number_of(note_gs[note_to_play_index]);
-    if (note_num == UINT8_MAX) return; // Skip if invalid note
+  // Before sending the MIDI note, check if the note to play is a rest (0)
+  if(note_to_play_index == (Usz)-1) { // If it's a rest
+      PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
+      return; // Skip this iteration, ensuring a rest
+  }
+  
+  // Use previously declared variables without re-declaration
+  note_num = midi_note_number_of(note_gs[note_to_play_index]);
+  if (note_num == UINT8_MAX) return; // Skip if invalid note
 
-    // Normal note playing logic using already declared variables
-    // Note: No need to re-declare 'channel', 'velocity', and 'length' here
+  // Normal note playing logic using already declared variables
+  // Note: No need to re-declare 'channel', 'velocity', and 'length' here
 
-    // Send MIDI note event
-    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-    oe->oevent_type = Oevent_type_midi_note;
-    oe->channel = channel;
-    oe->octave = (U8)current_octave; // Maintained from the last note
-    oe->note = note_num;
-    oe->velocity = velocity;
-    oe->duration = length;
-    oe->mono = 0;
+  // Send MIDI note event
+  Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+  oe->oevent_type = Oevent_type_midi_note;
+  oe->channel = channel;
+  oe->octave = (U8)current_octave; // Maintained from the last note
+  oe->note = note_num;
+  oe->velocity = velocity;
+  oe->duration = (U8)(length & 0x7F);
+  oe->mono = 0;
 
-    PORT(0, 0, OUT); // Mark output to indicate operation
+  PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
 
 
