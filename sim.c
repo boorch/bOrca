@@ -947,13 +947,20 @@ BEGIN_OPERATOR(midiarpeggiator)
   // Determine octave span and direction
   bool direction_down = false;
   Usz octave_span = 1;
-  if (octave_range_index <= 4) {
-    octave_span = octave_range_index + 1;
-  } else if (octave_range_index >= 0x11 && octave_range_index <= 0x14) { // 'g' to 'j'
+  if (octave_range_glyph == '.' || (octave_range_index >= 5 && octave_range_index <= 9)) {
+    // Values '0', '.', '5' to '9' result in 1 octave range, upwards
+    octave_span = 1;
+  } else if (octave_range_index >= 1 && octave_range_index <= 4) {
+    // Values '1' to '4' specify the octave range upwards
+    octave_span = octave_range_index;
+  } else if (octave_range_index >= 0x1A && octave_range_index <= 0x1D) { // 'a' to 'd'
+    // Values 'a' to 'd' specify the octave range downwards
     direction_down = true;
-    octave_span = octave_range_index - 0x10;
-  } else if (octave_range_index >= 5 && octave_range_index <= 0x15) {
-    octave_span = 5; // Clamp values '5' to 'f' and beyond 'j' to 5 octaves upwards
+    octave_span = octave_range_index - 0x19;
+  } else if (octave_range_index >= 0x1E) { // 'e' and above
+    // Values 'e' and above behave like 'a', 1 octave but reversed
+    direction_down = true;
+    octave_span = 1;
   }
 
   // Get pattern length and current octave
