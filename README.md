@@ -126,21 +126,41 @@ This operator generates a MIDI arpeggiated sequence based on the input parameter
 
 Each pattern is defined by a sequence of steps that dictate the order of arpeggiation. Below are the currently available patterns and their descriptions:
 
-| Pattern Index | Notes Sequence       | Description           |
-|---------------|----------------------|-----------------------|
-| 0             | 1, 2, 3              | Up                    |
-| 1             | 3, 2, 1              | Down                  |
-| 2             | 1, 3, 2              | Converge up           |
-| 3             | 3, 1, 2              | Converge down         |
-| 4             | 2, 1, 3              | Diverge up            |
-| 5             | 2, 3, 1              | Diverge down          |
-| 6             | 1, 2, 3, 2           | Up bounce triangle    |
-| 7             | 3, 2, 1, 2           | Down bounce triangle  |
-| 8             | 1, 2, 3, 3, 2, 1     | Up bounce sine        |
-| 9             | 3, 2, 1, 1, 2, 3     | Down bounce sine      |
-
 To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeggiator operator (`&`). The `Note to Play` input determines which step in the selected pattern to play, allowing the sequence to progress. Suggestions: Connect `Note to Play` to a Clock operator, or a Track operator, or a Random Unique operator for complex and/or unexpected patterns.
 
-*IMPORTANT: You may want to avoid using an index value greater than 9 for `Arp Pattern` since it "wraps around" (e.g: "a" is "0"). So in the very likely case of me adding new arp patterns for a future update, any index you set above 9 (as of now) may result in playing a different pattern.*
+| Pattern Index | Notes Sequence       | Description               |
+|---------------|----------------------|---------------------------|
+| 0             | 1, 2, 3              | Up                        |
+| 1             | 3, 2, 1              | Down                      |
+| 2             | 1, 3, 2              | Converge up               |
+| 3             | 3, 1, 2              | Converge down             |
+| 4             | 2, 1, 3              | Diverge up                |
+| 5             | 2, 3, 1              | Diverge down              |
+| 6             | 1, 2, 3, 2           | Up bounce triangle        |
+| 7             | 3, 2, 1, 2           | Down bounce triangle      |
+| 8             | 1, 2, 3, 3, 2, 1     | Up bounce sine            |
+| 9             | 3, 2, 1, 1, 2, 3     | Down bounce sine          |
+| 10            | 1, 2, 3, 0           | Up with rest              |
+| 11            | 3, 2, 1, 0           | Down with rest            |
+| 12            | 1, 3, 2, 0           | Converge up with rest     |
+| 13            | 3, 1, 2, 0           | Converge down with rest   |
+| 14            | 2, 1, 3, 0           | Diverge up with rest      |
+| 15            | 2, 3, 1, 0           | Diverge down with rest    |
+| 16            | 1, 2, 3, 2, 0        | Up bounce triangle with rest |
+| 17            | 3, 2, 1, 2, 0        | Down bounce triangle with rest |
+| 18            | 1, 0, 2, 3, 0        | Riff with rests           |
+| 19            | 1, 0, 3, 2, 0        | Alternate riff with rests |
+| 20            | 1, 2, 0, 3, 0        | Riff variation with rests |
+| 21            | 1, 3, 0, 2, 0        | Another riff variation with rests |
+| 22            | 1, 2, 0, 1, 3        | Riff with internal rest   |
+| 23            | 1, 3, 0, 1, 2        | Riff alternate with internal rest |
+| 24            | 1, 2, 0, 1, 3, 0     | Extended riff with rests  |
+| 25            | 1, 0, 2, 1, 0, 3     | Complex riff with rests   |
+| 26            | 1, 0, 3, 1, 0, 2     | Complex alternate riff with rests |
+
+
+
+
+*IMPORTANT: Arp patterns `0` to `9` are most likely to be permanent. You can come up with complex sequences using only them and banging the operator in various timings. But the patterns `a` and above are just some experimental combinations and they're likely to change in future updates.
 
 
