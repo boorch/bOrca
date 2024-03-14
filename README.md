@@ -86,3 +86,40 @@ Example 3:
 
 ## Random Unique Operator ($):
 Requires bang. Similar to the Random Operator, but designed to avoid producing identical outputs on consecutive bangs in a creative (in other words, "hacky") manner.
+
+
+## MIDI Arpeggiator Operator (`&`):
+The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequences from a set of input notes across specified octave ranges. It supports dynamic direction control, allowing sequences to ascend, descend, or both based on the input parameters.
+
+| Parameter     | Description                                               |
+|---------------|-----------------------------------------------------------|
+| Arp Pattern   | Selects the arpeggiation pattern.                         |
+| Note to Play  | Determines the current note in the arpeggio pattern.      |
+| Octave Range  | Sets the range and direction of octaves for arpeggiation. |
+| Operator      | "&"                                                       |
+| Channel       | MIDI channel for output.                                  |
+| Base Octave   | Starting octave for the first note in the pattern.        |
+| Note 1        | First note in the arpeggio sequence.                      |
+| Note 2        | Second note in the arpeggio sequence.                     |
+| Note 3        | Third note in the arpeggio sequence.                      |
+| Velocity      | MIDI velocity of the played notes.                        |
+| Duration      | Length of each note in the sequence.                      |
+
+### Inputs
+
+| Arp Pattern | Note to Play | Octave Range | Operator | Channel | Base Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
+|:-----------:|:------------:|:------------:|:--------:|:-------:|:-----------:|:------:|:------:|:------:|:--------:|:--------:|
+|      P      |       N      |       R      |    &     |    C    |      O      |   N1   |   N2   |   N3   |    V     |    D     |
+
+- `P`: Arpeggio Pattern Index (0-9 for predefined patterns)
+- `N`: Note to play (based on selected arpeggio pattern's offset)
+- `R`: Octave range and direction (0-4 for ascending, a-d for descending, 5-9 & e+ act like 0)
+- `C`, `O`, `N1`, `N2`, `N3`, `V`, `D`: Similar to the MidiChord operator
+
+### Example
+
+- `>02a&04CEGf3`: This example uses arpeggio pattern `2`, plays the first note in the pattern, spans across 1 octave in a descending direction, on channel `0`, starting from octave `4`, with the notes `C`, `E`, `G`, velocity `f`, and duration `3`.
+
+This operator generates a MIDI arpeggiated sequence based on the input parameters, allowing for intricate rhythmic patterns to be easily created and manipulated live. Adjust the `Arp Pattern`, `Note to Play`, and `Octave Range` to explore different musical ideas.
+
+
