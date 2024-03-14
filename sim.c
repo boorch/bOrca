@@ -953,12 +953,12 @@ BEGIN_OPERATOR(midiarpeggiator)
   } else if (octave_range_index >= 1 && octave_range_index <= 4) {
     // Values '1' to '4' specify the octave range upwards
     octave_span = octave_range_index;
-  } else if (octave_range_index >= 0x1A && octave_range_index <= 0x1D) { // 'a' to 'd'
-    // Values 'a' to 'd' specify the octave range downwards
+  } else if (octave_range_index >= 10 && octave_range_index <= 13) { // Corrected 'a' (10) to 'd' (13)
+    // Correctly interpret 'a' to 'd' as decimal 10 to 13 for downward octave ranges
     direction_down = true;
-    octave_span = octave_range_index - 0x19;
-  } else if (octave_range_index >= 0x1E) { // 'e' and above
-    // Values 'e' and above behave like 'a', 1 octave but reversed
+    octave_span = octave_range_index - 9; // Adjusted to correctly calculate the span based on 'a' to 'd'
+  } else if (octave_range_index >= 14) { // Corrected 'e' and above
+    // Interpret 'e' and above as 'a', 1 octave but reversed
     direction_down = true;
     octave_span = 1;
   }
