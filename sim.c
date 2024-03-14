@@ -1059,7 +1059,7 @@ BEGIN_OPERATOR(midiarpeggiator)
       oe->octave = (U8)current_octave; // Maintained from last note
       oe->note = note_num;
       oe->velocity = velocity;
-      oe->duration = length;
+      oe->duration = (U8)(length & 0x7F);
       oe->mono = 0;
   
       PORT(0, 0, OUT); // Mark output to indicate operation
