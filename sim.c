@@ -1036,34 +1036,30 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
-  // Before sending the MIDI note, check if the note to play is a rest (0)
-  if(note_to_play_index == (Usz)-1) { // Check for '0', adjusted for 0-based index
-      // It's a rest, so don't play a note. You can return early or continue the loop
-      // Ensure timing is maintained but skip the MIDI note sending for this cycle
-      PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
-      return; // Skip this iteration, ensuring a rest
-  } else {
-      // Normal note playing logic
-      Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-      U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
-      if (note_num == UINT8_MAX) return; // Skip if invalid note
-  
-      // Prepare and send MIDI note as usual
-      U8 channel = (U8)index_of(PEEK(0, 1));
-      U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
-      U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
-  
-      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = channel;
-      oe->octave = (U8)current_octave; // Maintained from last note
-      oe->note = note_num;
-      oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7F);
-      oe->mono = 0;
-  
-      PORT(0, 0, OUT); // Mark output to indicate operation
-  }
+    // Before sending the MIDI note, check if the note to play is a rest (0)
+    if(note_to_play_index == (Usz)-1) { // If it's a rest
+        PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
+        return; // Skip this iteration, ensuring a rest
+    }
+    
+    // Use previously declared variables without re-declaration
+    note_num = midi_note_number_of(note_gs[note_to_play_index]);
+    if (note_num == UINT8_MAX) return; // Skip if invalid note
+
+    // Normal note playing logic using already declared variables
+    // Note: No need to re-declare 'channel', 'velocity', and 'length' here
+
+    // Send MIDI note event
+    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = channel;
+    oe->octave = (U8)current_octave; // Maintained from the last note
+    oe->note = note_num;
+    oe->velocity = velocity;
+    oe->duration = length;
+    oe->mono = 0;
+
+    PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
 
 
