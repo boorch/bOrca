@@ -924,8 +924,7 @@ static size_t arpPatternLengths[] = {
 
 BEGIN_OPERATOR(midiarpeggiator)
   // Define input ports for arpeggio pattern, range, and current note position
-  PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
-  PORT(0, -2, IN | PARAM); // Arpeggio Range
+  PORT(0, -2, IN | PARAM); // Arpeggio Pattern Index
   PORT(0, -1, IN | PARAM); // Note to play (based on selected arpeggio pattern's offset, not the note set in inputs 3,4,5)
 
   // Manually define input ports for channel, octave, notes, velocity, and length
@@ -940,7 +939,6 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   // Variables for pattern index, range, and note selection
   Usz arp_pattern_index = index_of(PEEK(0, -3));
-  Usz arp_range = index_of(PEEK(0, -2));
   Usz note_selection = index_of(PEEK(0, -1));
   
   // Reintegrate the arpPatterns and arpPatternLengths usage
@@ -965,17 +963,15 @@ BEGIN_OPERATOR(midiarpeggiator)
   if (midi_note_calc >= 0 && midi_note_calc <= 127) {
       U8 midi_note = (U8)midi_note_calc;
       // Send MIDI note event
-  }
-
-  // Send MIDI note event
-  if (midi_note < 128 && note_num != UINT8_MAX) { // Valid note check
-    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-    oe->oevent_type = Oevent_type_midi_note;
-    oe->channel = channel;
-    oe->note = midi_note;
-    oe->velocity = velocity;
-    oe->duration = (U8)(length & 0x7F);
-    oe->mono = 0;
+    if (midi_note < 128 && note_num != UINT8_MAX) { // Valid note check
+      Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = channel;
+      oe->note = midi_note;
+      oe->velocity = velocity;
+      oe->duration = (U8)(length & 0x7F);
+      oe->mono = 0;
+    }
   }
 
   PORT(0, 0, OUT); // Mark output to indicate operation
