@@ -922,12 +922,16 @@ static size_t arpPatternLengths[] = {
 };
 
 BEGIN_OPERATOR(midiarpeggiator)
-  // Additional inputs for arpeggio pattern and range, plus standard inputs for channel, octave, notes, velocity, and length
+  // Define input ports for arpeggio pattern and range
   PORT(0, -2, IN | PARAM); // Arpeggio Pattern Index
   PORT(0, -1, IN | PARAM); // Arpeggio Range
-  for (Usz i = 1; i <= 5; ++i) { // Inputs for channel, octave, three notes
-    PORT(0, (Isz)i, IN);
-  }
+  
+  // Manually define input ports for channel, octave, notes, velocity, and length
+  PORT(0, 1, IN); // Channel
+  PORT(0, 2, IN); // Octave
+  PORT(0, 3, IN); // Note 1
+  PORT(0, 4, IN); // Note 2
+  PORT(0, 5, IN); // Note 3
   PORT(0, 6, IN); // Velocity
   PORT(0, 7, IN); // Length
   STOP_IF_NOT_BANGED;
@@ -946,14 +950,19 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 channel = (U8)index_of(channel_glyph);
   U8 base_octave = (U8)index_of(octave_glyph);
 
-  // Process notes, velocity, and length
+  // Gather note glyphs directly as done in midichord
+  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
+  
+  // Initialize note numbers array with invalid MIDI note numbers
   U8 note_numbers[3] = {UINT8_MAX, UINT8_MAX, UINT8_MAX};
-  for (Usz i = 0; i < 3; ++i) {
-    Glyph note_glyph = PEEK(0, i + 3); // Starting from position 3 to 5 for notes
-    if (note_glyph != '.') {
-      note_numbers[i] = midi_note_number_of(note_glyph);
-    }
+  
+  // Convert glyphs to MIDI note numbers if they're not '.'
+  for (int i = 0; i < 3; i++) {
+      if (note_gs[i] != '.') {
+          note_numbers[i] = midi_note_number_of(note_gs[i]);
+      }
   }
+
   U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
