@@ -893,16 +893,16 @@ END_OPERATOR
 
 // BOORCH's new MidiArpeggiator
 // Arpeggio patterns
-static Usz arp00[] = {1, 2, 3}; // up 3 notes
-static Usz arp01[] = {3, 2, 1}; // down 3 notes
+static Usz arp00[] = {1, 2, 3}; // up
+static Usz arp01[] = {3, 2, 1}; // down
 static Usz arp02[] = {1, 3, 2}; // converge up
 static Usz arp03[] = {3, 1, 2}; // converge down
 static Usz arp04[] = {2, 1, 3}; // diverge up
 static Usz arp05[] = {2, 3, 1}; // diverge down
-static Usz arp06[] = {1, 2, 3, 2}; // up down saw
-static Usz arp07[] = {3, 2, 1, 2}; // down up saw
-static Usz arp08[] = {1, 2, 3, 3, 2, 1}; // up down sine
-static Usz arp09[] = {3, 2, 1, 1, 2, 3}; // down up sine
+static Usz arp06[] = {1, 2, 3, 2}; // up bounce triangle
+static Usz arp07[] = {3, 2, 1, 2}; // down bounce triangle
+static Usz arp08[] = {1, 2, 3, 3, 2, 1}; // up bounce sine
+static Usz arp09[] = {3, 2, 1, 1, 2, 3}; // down bounce sine
 
 static Usz* arpPatterns[] = {
     arp00, arp01, arp02, arp03, arp04,
