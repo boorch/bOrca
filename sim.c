@@ -921,8 +921,6 @@ static size_t arpPatternLengths[] = {
     sizeof(arp09) / sizeof(arp09[0])
 };
 
-// Assume arpPatterns and arpPatternLengths arrays are defined globally
-// as per your previous input, representing the arpeggio patterns and their lengths
 
 BEGIN_OPERATOR(midiarpeggiator)
   // Input Ports for additional parameters: Arpeggio Pattern and Range
