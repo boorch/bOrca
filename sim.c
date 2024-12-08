@@ -1,5 +1,8 @@
 #include "sim.h"
 #include "gbuffer.h"
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
 
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
@@ -1065,94 +1068,87 @@ END_OPERATOR
 
 
 // BOORCH's new Random Unique
-void reset_last_unique_value(void) {
-    last_random_unique = UINT_MAX; // Reset the value
+#define MAX_SEQUENCE_SIZE 36 // For values 0-9 and A-Z
+
+static struct {
+    Usz sequence[MAX_SEQUENCE_SIZE];
+    Usz current_index;
+    Usz sequence_size;
+    bool initialized;
+} unique_random_state = {0};
+
+static void shuffle_sequence(Usz *array, Usz n) {
+    if (n <= 1) return;
+    
+    for (Usz i = n - 1; i > 0; i--) {
+        // Use existing random generator from ORCA
+        Usz j = (Usz)(((U32)rand()) % (i + 1));
+        // Swap
+        Usz temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
 }
 
-#include <stdlib.h> // For rand()
-#include <time.h>   // For time()
+static void initialize_sequence(Usz min, Usz max) {
+    unique_random_state.sequence_size = (max >= min) ? (max - min + 1) : 0;
+    if (unique_random_state.sequence_size > MAX_SEQUENCE_SIZE) {
+        unique_random_state.sequence_size = MAX_SEQUENCE_SIZE;
+    }
+    
+    // Fill sequence with values from min to max
+    for (Usz i = 0; i < unique_random_state.sequence_size; i++) {
+        unique_random_state.sequence[i] = min + i;
+    }
+    
+    shuffle_sequence(unique_random_state.sequence, unique_random_state.sequence_size);
+    unique_random_state.current_index = 0;
+}
+
+void reset_last_unique_value(void) {
+    unique_random_state.initialized = false;
+}
 
 BEGIN_OPERATOR(randomunique)
-  LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM); // Min
-  PORT(0, 1, IN);          // Max
-  PORT(1, 0, OUT);         // Output
-  
-  // Ensure rand is initialized
-  static bool rand_initialized = false;
-  if (!rand_initialized) {
-    srand((unsigned int)time(NULL));
-    rand_initialized = true;
-  }
+    LOWERCASE_REQUIRES_BANG;
+    PORT(0, -1, IN | PARAM); // Min
+    PORT(0, 1, IN);          // Max
+    PORT(1, 0, OUT);         // Output
+    
+    Glyph min_glyph = PEEK(0, -1);
+    Glyph max_glyph = PEEK(0, 1);
 
-  Glyph min_glyph = PEEK(0, -1);
-  Glyph max_glyph = PEEK(0, 1);
-  
-  Usz min = (min_glyph == '.') ? 0 : index_of(min_glyph);
-  Usz max = (max_glyph == '.') ? 35 : index_of(max_glyph); // Assuming base36 for 'z'
-  
-  if (max < min) {
-    Usz temp = max;
-    max = min;
-    min = temp;
-  }
-
-  // If min and max are the same, we don't have to go through the 'attemps'. Hacky but a valid solution to an edge case.
-  if (min == max) {
-    POKE(1, 0, glyph_with_case(glyph_of(min), '0')); // Output the single possible value
-    last_random_unique = min; // Update the last unique value
-    return; // Exit the operator early
-  }
-
-  Usz val = (last_random_unique == UINT_MAX) ? min : last_random_unique;
-  bool isUniqueFound = false;
-
-  for (Usz attempt = 0; attempt < 10 && !isUniqueFound; ++attempt) {
-    Usz key = (extra_params->random_seed + y * width + x) ^ (Tick_number << UINT32_C(16));
-    key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
-    key += (key << UINT32_C(3));
-    key ^= (key >> UINT32_C(4));
-    key *= UINT32_C(0x27d4eb2d);
-    key ^= (key >> UINT32_C(15));
-    Usz potential_val = key % (max - min + 1) + min;
-
-    if (potential_val != last_random_unique) {
-      val = potential_val;
-      isUniqueFound = true;
-    } else {
-      // Try ±2 or ±1 adjustments if direct random attempt fails
-      int adjustments[2] = {2, -2};
-      for (int i = 0; i < 2; ++i) {
-        int adjusted_val = (int)val + adjustments[i];
-        if (adjusted_val >= (int)min && adjusted_val <= (int)max && adjusted_val != (int)last_random_unique) {
-          val = (Usz)adjusted_val;
-          isUniqueFound = true;
-          break;
-        }
-      }
-      if (!isUniqueFound) {
-        // If ±2 adjustments fail, try ±1
-        adjustments[0] = 1;
-        adjustments[1] = -1;
-        for (int i = 0; i < 2; ++i) {
-          int adjusted_val = (int)val + adjustments[i];
-          if (adjusted_val >= (int)min && adjusted_val <= (int)max && adjusted_val != (int)last_random_unique) {
-            val = (Usz)adjusted_val;
-            isUniqueFound = true;
-            break;
-          }
-        }
-      }
+    if (min_glyph == '.' || max_glyph == '.') {
+        return;
     }
-  }
+    
+    Usz min = index_of(min_glyph);
+    Usz max = index_of(max_glyph);
+    
+    if (max < min) {
+        Usz temp = min;
+        min = max;
+        max = temp;
+    }
 
-  if (!isUniqueFound) {
-    // Fallback to last unique or min if last unique is UINT_MAX
-    val = (last_random_unique != UINT_MAX) ? last_random_unique : min;
-  }
-
-  last_random_unique = val; // Update the last unique value
-  POKE(1, 0, glyph_with_case(glyph_of(val), '0')); // Output the value
+    // Initialize or reinitialize if needed
+    if (!unique_random_state.initialized || 
+        unique_random_state.current_index >= unique_random_state.sequence_size) {
+        initialize_sequence(min, max);
+        unique_random_state.initialized = true;
+    }
+    
+    // Get next value from sequence
+    Usz result = unique_random_state.sequence[unique_random_state.current_index];
+    unique_random_state.current_index++;
+    
+    // Reshuffle if we've used all values
+    if (unique_random_state.current_index >= unique_random_state.sequence_size) {
+        shuffle_sequence(unique_random_state.sequence, unique_random_state.sequence_size);
+        unique_random_state.current_index = 0;
+    }
+    
+    POKE(1, 0, glyph_of(result));
 END_OPERATOR
 
 
