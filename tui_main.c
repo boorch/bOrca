@@ -2280,7 +2280,8 @@ static void push_opers_guide_msg(void) {
       {';', "udp", "Sends UDP message."},
       {'^', "scale", "Outputs note base on root, scale, degree."},
       {'|', "midichord", "Sends up to 3 MIDI notes."},
-      {'$', "randomunique", "Outputs non-repeating random value."}
+      {'$', "randomunique", "Outputs non-repeating random value."},
+      {'&', "midiarpeggiator", "MIDI Arpeggiator"}
   };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {

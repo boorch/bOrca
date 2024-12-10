@@ -1,8 +1,8 @@
 #include "sim.h"
 #include "gbuffer.h"
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
@@ -767,48 +767,62 @@ END_OPERATOR
 // BOORCH's new Scale OP
 
 // Scale intervals with base36 (Orca) to decimal conversion for C
-static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11}; // "024579b"
-static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10}; // "023578a"
-static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9}; // "02479"
-static Usz minor_pentatonic_scale[] = {0, 3, 5, 7, 10}; // "0357a"
-static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9}; // "023479"
-static Usz blues_minor_scale[] = {0, 3, 5, 6, 7, 10}; // "03567a"
-static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11}; // "024679b"
-static Usz whole_scale[] = {0, 2, 4, 6, 8, 10}; // "02468a"
-static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10}; // "0134679a"
-static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10}; // "013468a"
-static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10}; // "013568a"
-static Usz phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10}; // "013578a"
+static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};            // "024579b"
+static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};            // "023578a"
+static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9};        // "02479"
+static Usz minor_pentatonic_scale[] = {0, 3, 5, 7, 10};       // "0357a"
+static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9};          // "023479"
+static Usz blues_minor_scale[] = {0, 3, 5, 6, 7, 10};         // "03567a"
+static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};           // "024679b"
+static Usz whole_scale[] = {0, 2, 4, 6, 8, 10};               // "02468a"
+static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};    // "0134679a"
+static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};    // "013468a"
+static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};          // "013568a"
+static Usz phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10};         // "013578a"
 static Usz neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
 static Usz neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
-static Usz hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10}; // "01358a"
-static Usz pelog_scale[] = {0, 1, 3, 7, 8}; // "01378"
-static Usz spanish_scale[] = {0, 1, 4, 5, 7, 8, 10}; // "014578a"
-static Usz bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11}; // "014578b"
-static Usz ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10}; // "014579a"
-static Usz augmented2_scale[] = {0, 1, 4, 5, 8, 9}; // "014589"
-static Usz purvi_scale[] = {0, 1, 4, 6, 7, 8, 11}; // "014678b"
-static Usz marva_scale[] = {0, 1, 4, 6, 7, 9, 11}; // "014679b"
-static Usz enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11}; // "01468ab"
-static Usz scriabin_scale[] = {0, 1, 4, 7, 9}; // "01479"
-static Usz indian_scale[] = {0, 4, 5, 7, 10}; // "0457a"
-
+static Usz hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10};        // "01358a"
+static Usz pelog_scale[] = {0, 1, 3, 7, 8};                   // "01378"
+static Usz spanish_scale[] = {0, 1, 4, 5, 7, 8, 10};          // "014578a"
+static Usz bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11};          // "014578b"
+static Usz ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10};      // "014579a"
+static Usz augmented2_scale[] = {0, 1, 4, 5, 8, 9};           // "014589"
+static Usz purvi_scale[] = {0, 1, 4, 6, 7, 8, 11};            // "014678b"
+static Usz marva_scale[] = {0, 1, 4, 6, 7, 9, 11};            // "014679b"
+static Usz enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11};       // "01468ab"
+static Usz scriabin_scale[] = {0, 1, 4, 7, 9};                // "01479"
+static Usz indian_scale[] = {0, 4, 5, 7, 10};                 // "0457a"
 
 // Scale array pointers
-static Usz* scales[] = {
-    major_scale, minor_scale, major_pentatonic_scale, minor_pentatonic_scale,
-    blues_major_scale, blues_minor_scale, lydian_scale, whole_scale,
-    diminished_scale, super_locrian_scale, locrian_scale, phrygian_scale,
-    neapolitan_minor_scale, neapolitan_major_scale, hex_phrygian_scale,
-    pelog_scale, spanish_scale, bhairav_scale, ahirbhairav_scale,
-    augmented2_scale, purvi_scale, marva_scale, enigmatic_scale,
-    scriabin_scale, indian_scale
-};
+static Usz *scales[] = {major_scale,
+                        minor_scale,
+                        major_pentatonic_scale,
+                        minor_pentatonic_scale,
+                        blues_major_scale,
+                        blues_minor_scale,
+                        lydian_scale,
+                        whole_scale,
+                        diminished_scale,
+                        super_locrian_scale,
+                        locrian_scale,
+                        phrygian_scale,
+                        neapolitan_minor_scale,
+                        neapolitan_major_scale,
+                        hex_phrygian_scale,
+                        pelog_scale,
+                        spanish_scale,
+                        bhairav_scale,
+                        ahirbhairav_scale,
+                        augmented2_scale,
+                        purvi_scale,
+                        marva_scale,
+                        enigmatic_scale,
+                        scriabin_scale,
+                        indian_scale};
 
 // Lengths of each scale
-static Usz scale_lengths[] = {
-    7, 7, 5, 5, 6, 6, 7, 6, 8, 7, 7, 7, 7, 7, 6, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5
-};
+static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 6, 8, 7, 7, 7, 7,
+                              7, 6, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
 
 BEGIN_OPERATOR(scale)
   PORT(0, -2, IN | PARAM); // Root note (0-'b')
@@ -822,11 +836,13 @@ BEGIN_OPERATOR(scale)
   // If degree is empty, output should also be empty
   if (degree_glyph == '.') {
     POKE(1, 0, '.'); // Output empty
-    LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
+    LOCK(1,
+         0); // Ensure the output is locked to prevent execution as an operator
     return;
   }
 
-  Usz root_note_index = index_of(root_note_glyph); // Now directly gives the index
+  Usz root_note_index =
+      index_of(root_note_glyph); // Now directly gives the index
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
@@ -836,14 +852,14 @@ BEGIN_OPERATOR(scale)
     return; // Check root_note_index for valid note range (0-'b')
 
   Usz scale_length = scale_lengths[scale_index];
-  Usz note_index = (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
-  
+  Usz note_index =
+      (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
+
   // Assuming note_sequence is a mapping that aligns with '0'-'b' input for C-B
   Glyph output_note_glyph = note_sequence[note_index];
   POKE(1, 0, output_note_glyph); // Output the note
   LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
 END_OPERATOR
-
 
 //BOORCH's new Midichord OP
 BEGIN_OPERATOR(midichord)
@@ -858,29 +874,39 @@ BEGIN_OPERATOR(midichord)
   Glyph length_g = PEEK(0, 7);
 
   Usz channel = index_of(channel_g);
-  int base_octave = (int)index_of(octave_g); // Explicitly cast for safe addition
-  U8 length = (U8)(index_of(length_g) & 0x7Fu); // Correctly declare and initialize length
-  
-  if (channel > 15) return;
+  int base_octave =
+      (int)index_of(octave_g); // Explicitly cast for safe addition
+  U8 length = (U8)(index_of(length_g) &
+                   0x7Fu); // Correctly declare and initialize length
 
-  int last_note_absolute = -1; // Store the absolute midi note number of the last note
+  if (channel > 15)
+    return;
+
+  int last_note_absolute =
+      -1; // Store the absolute midi note number of the last note
 
   for (int i = 0; i < 3; i++) {
     U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num == UINT8_MAX) continue; // Skip invalid notes
+    if (note_num == UINT8_MAX)
+      continue; // Skip invalid notes
 
-    int note_absolute = base_octave * 12 + note_num; // Calculate the absolute midi note number
+    int note_absolute =
+        base_octave * 12 + note_num; // Calculate the absolute midi note number
     if (note_absolute <= last_note_absolute) {
       // Ensure each note is higher than the previous
       base_octave = (last_note_absolute / 12) + 1;
     }
-    last_note_absolute = base_octave * 12 + note_num; // Update for the next iteration
-    
-    if (base_octave > 9) continue; // Skip notes with octaves out of MIDI bounds
+    last_note_absolute =
+        base_octave * 12 + note_num; // Update for the next iteration
 
-    U8 velocity = (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-    
-    Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    if (base_octave > 9)
+      continue; // Skip notes with octaves out of MIDI bounds
+
+    U8 velocity =
+        (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+
+    Oevent_midi_note *oe =
+        (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
     oe->oevent_type = Oevent_type_midi_note;
     oe->channel = (U8)channel;
     oe->octave = (U8)base_octave;
@@ -888,7 +914,7 @@ BEGIN_OPERATOR(midichord)
     oe->velocity = velocity;
     oe->duration = (U8)(length & 0x7F);
     oe->mono = 0;
-    
+
     PORT(0, 0, OUT);
   }
 
@@ -896,83 +922,65 @@ END_OPERATOR
 
 // BOORCH's new MidiArpeggiator
 // Arpeggio patterns
-static Usz arp00[] = {1, 2, 3}; // up
-static Usz arp01[] = {3, 2, 1}; // down
-static Usz arp02[] = {1, 3, 2}; // converge up
-static Usz arp03[] = {3, 1, 2}; // converge down
-static Usz arp04[] = {2, 1, 3}; // diverge up
-static Usz arp05[] = {2, 3, 1}; // diverge down
-static Usz arp06[] = {1, 2, 3, 2}; // up bounce triangle
-static Usz arp07[] = {3, 2, 1, 2}; // down bounce triangle
+static Usz arp00[] = {1, 2, 3};          // up
+static Usz arp01[] = {3, 2, 1};          // down
+static Usz arp02[] = {1, 3, 2};          // converge up
+static Usz arp03[] = {3, 1, 2};          // converge down
+static Usz arp04[] = {2, 1, 3};          // diverge up
+static Usz arp05[] = {2, 3, 1};          // diverge down
+static Usz arp06[] = {1, 2, 3, 2};       // up bounce triangle
+static Usz arp07[] = {3, 2, 1, 2};       // down bounce triangle
 static Usz arp08[] = {1, 2, 3, 3, 2, 1}; // up bounce sine
 static Usz arp09[] = {3, 2, 1, 1, 2, 3}; // down bounce sine
-static Usz arp10[] = {1, 2, 3, 0}; // up with rest
-static Usz arp11[] = {3, 2, 1, 0}; // down with rest
-static Usz arp12[] = {1, 3, 2, 0}; // converge up with rest
-static Usz arp13[] = {3, 1, 2, 0}; // converge down with rest
-static Usz arp14[] = {2, 1, 3, 0}; // diverge up with rest
-static Usz arp15[] = {2, 3, 1, 0}; // diverge down with rest
-static Usz arp16[] = {1, 2, 3, 2, 0}; // up bounce triangle with rest
-static Usz arp17[] = {3, 2, 1, 2, 0}; // down bounce triangle with rest
-static Usz arp18[] = {1, 0, 2, 3, 0}; // riff
-static Usz arp19[] = {1, 0, 3, 2, 0}; // riff
-static Usz arp20[] = {1, 2, 0, 3, 0}; // riff
-static Usz arp21[] = {1, 3, 0, 2, 0}; // riff
-static Usz arp22[] = {1, 2, 0, 1, 3}; // riff
-static Usz arp23[] = {1, 3, 0, 1, 2}; // riff
+static Usz arp10[] = {1, 2, 3, 0};       // up with rest
+static Usz arp11[] = {3, 2, 1, 0};       // down with rest
+static Usz arp12[] = {1, 3, 2, 0};       // converge up with rest
+static Usz arp13[] = {3, 1, 2, 0};       // converge down with rest
+static Usz arp14[] = {2, 1, 3, 0};       // diverge up with rest
+static Usz arp15[] = {2, 3, 1, 0};       // diverge down with rest
+static Usz arp16[] = {1, 2, 3, 2, 0};    // up bounce triangle with rest
+static Usz arp17[] = {3, 2, 1, 2, 0};    // down bounce triangle with rest
+static Usz arp18[] = {1, 0, 2, 3, 0};    // riff
+static Usz arp19[] = {1, 0, 3, 2, 0};    // riff
+static Usz arp20[] = {1, 2, 0, 3, 0};    // riff
+static Usz arp21[] = {1, 3, 0, 2, 0};    // riff
+static Usz arp22[] = {1, 2, 0, 1, 3};    // riff
+static Usz arp23[] = {1, 3, 0, 1, 2};    // riff
 static Usz arp24[] = {1, 2, 0, 1, 3, 0}; // riff
 static Usz arp25[] = {1, 0, 2, 1, 0, 3}; // riff
 static Usz arp26[] = {1, 0, 3, 1, 0, 2}; // riff
 
-
 // Arpeggio pattern pointers
-static Usz* arpPatterns[] = {
-    arp00, arp01, arp02, arp03, arp04,
-    arp05, arp06, arp07, arp08, arp09,
-    arp10, arp11, arp12, arp13, arp14,
-    arp15, arp16, arp17, arp18, arp19,
-    arp20, arp21, arp22, arp23, arp24,
-    arp25, arp26
-};
+static Usz *arpPatterns[] = {arp00, arp01, arp02, arp03, arp04, arp05, arp06,
+                             arp07, arp08, arp09, arp10, arp11, arp12, arp13,
+                             arp14, arp15, arp16, arp17, arp18, arp19, arp20,
+                             arp21, arp22, arp23, arp24, arp25, arp26};
 
 // Lengths of each arpeggio pattern
 static size_t arpPatternLengths[] = {
-    sizeof(arp00) / sizeof(arp00[0]),
-    sizeof(arp01) / sizeof(arp01[0]),
-    sizeof(arp02) / sizeof(arp02[0]),
-    sizeof(arp03) / sizeof(arp03[0]),
-    sizeof(arp04) / sizeof(arp04[0]),
-    sizeof(arp05) / sizeof(arp05[0]),
-    sizeof(arp06) / sizeof(arp06[0]),
-    sizeof(arp07) / sizeof(arp07[0]),
-    sizeof(arp08) / sizeof(arp08[0]),
-    sizeof(arp09) / sizeof(arp09[0]),
-    sizeof(arp10) / sizeof(arp10[0]),
-    sizeof(arp11) / sizeof(arp11[0]),
-    sizeof(arp12) / sizeof(arp12[0]),
-    sizeof(arp13) / sizeof(arp13[0]),
-    sizeof(arp14) / sizeof(arp14[0]),
-    sizeof(arp15) / sizeof(arp15[0]),
-    sizeof(arp16) / sizeof(arp16[0]),
-    sizeof(arp17) / sizeof(arp17[0]),
-    sizeof(arp18) / sizeof(arp18[0]),
-    sizeof(arp19) / sizeof(arp19[0]),
-    sizeof(arp20) / sizeof(arp20[0]),
-    sizeof(arp21) / sizeof(arp21[0]),
-    sizeof(arp22) / sizeof(arp22[0]),
-    sizeof(arp23) / sizeof(arp23[0]),
-    sizeof(arp24) / sizeof(arp24[0]),
-    sizeof(arp25) / sizeof(arp25[0]),
-    sizeof(arp26) / sizeof(arp26[0])
-};
-
+    sizeof(arp00) / sizeof(arp00[0]), sizeof(arp01) / sizeof(arp01[0]),
+    sizeof(arp02) / sizeof(arp02[0]), sizeof(arp03) / sizeof(arp03[0]),
+    sizeof(arp04) / sizeof(arp04[0]), sizeof(arp05) / sizeof(arp05[0]),
+    sizeof(arp06) / sizeof(arp06[0]), sizeof(arp07) / sizeof(arp07[0]),
+    sizeof(arp08) / sizeof(arp08[0]), sizeof(arp09) / sizeof(arp09[0]),
+    sizeof(arp10) / sizeof(arp10[0]), sizeof(arp11) / sizeof(arp11[0]),
+    sizeof(arp12) / sizeof(arp12[0]), sizeof(arp13) / sizeof(arp13[0]),
+    sizeof(arp14) / sizeof(arp14[0]), sizeof(arp15) / sizeof(arp15[0]),
+    sizeof(arp16) / sizeof(arp16[0]), sizeof(arp17) / sizeof(arp17[0]),
+    sizeof(arp18) / sizeof(arp18[0]), sizeof(arp19) / sizeof(arp19[0]),
+    sizeof(arp20) / sizeof(arp20[0]), sizeof(arp21) / sizeof(arp21[0]),
+    sizeof(arp22) / sizeof(arp22[0]), sizeof(arp23) / sizeof(arp23[0]),
+    sizeof(arp24) / sizeof(arp24[0]), sizeof(arp25) / sizeof(arp25[0]),
+    sizeof(arp26) / sizeof(arp26[0])};
 
 BEGIN_OPERATOR(midiarpeggiator)
   // Define input ports for pattern index, current note position, octave range and direction, and MIDI parameters
   PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
-  PORT(0, -2, IN | PARAM); // Note to play (based on selected arpeggio pattern's offset)
+  PORT(0, -2,
+       IN |
+           PARAM); // Note to play (based on selected arpeggio pattern's offset)
   PORT(0, -1, IN | PARAM); // Octave range and direction
-  
+
   // Additional inputs for MIDI event
   PORT(0, 1, IN); // Channel
   PORT(0, 2, IN); // Base Octave
@@ -991,25 +999,39 @@ BEGIN_OPERATOR(midiarpeggiator)
 
   // Determine octave span and direction
   bool direction_down = false;
+  bool mono = false;
   Usz octave_span = 1;
-  if (octave_range_glyph == '.' || (octave_range_index >= 5 && octave_range_index <= 9)) {
-    // Values '0', '.', '5' to '9' result in 1 octave range, upwards
-    octave_span = 1;
-  } else if (octave_range_index >= 1 && octave_range_index <= 4) {
-    // Values '1' to '4' specify the octave range upwards
+
+  // Parse octave range parameter
+  if (octave_range_index >= 1 && octave_range_index <= 4) {
+    // 1-4: Ascending monophonic
+    direction_down = false;
     octave_span = octave_range_index;
-  } else if (octave_range_index >= 10 && octave_range_index <= 13) { // Corrected 'a' (10) to 'd' (13)
-    // Correctly interpret 'a' to 'd' as decimal 10 to 13 for downward octave ranges
+    mono = true;
+  } else if (octave_range_index >= 5 && octave_range_index <= 8) {
+    // 5-8: Ascending polyphonic
+    direction_down = false;
+    octave_span = octave_range_index - 4;
+    mono = false;
+  } else if (octave_range_index >= 10 && octave_range_index <= 13) {
+    // a-d: Descending monophonic
     direction_down = true;
-    octave_span = octave_range_index - 9; // Adjusted to correctly calculate the span based on 'a' to 'd'
-  } else if (octave_range_index >= 14) { // Corrected 'e' and above
-    // Interpret 'e' and above as 'a', 1 octave but reversed
+    octave_span = octave_range_index - 9;
+    mono = true;
+  } else if (octave_range_index >= 14 && octave_range_index <= 17) {
+    // e-h: Descending polyphonic
     direction_down = true;
-    octave_span = 1;
+    octave_span = octave_range_index - 13;
+    mono = false;
+  } else {
+    // All other values (0, 9, i+): No output
+    return;
   }
 
   // Get pattern length and current octave
-  size_t pattern_length = arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) / sizeof(arpPatternLengths[0]))];
+  size_t pattern_length =
+      arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) /
+                                             sizeof(arpPatternLengths[0]))];
 
   // Calculate current note in pattern and adjust octave if necessary
   Usz base_octave = index_of(PEEK(0, 2));
@@ -1019,141 +1041,154 @@ BEGIN_OPERATOR(midiarpeggiator)
     current_octave += (current_position / pattern_length) % octave_span;
     note_in_pattern_index = current_position % pattern_length;
   } else {
-    current_octave += octave_span - 1 - ((current_position / pattern_length) % octave_span);
-    note_in_pattern_index = pattern_length - 1 - (current_position % pattern_length);
+    current_octave +=
+        octave_span - 1 - ((current_position / pattern_length) % octave_span);
+    note_in_pattern_index =
+        pattern_length - 1 - (current_position % pattern_length);
   }
 
   // Ensure current_octave is within MIDI limits
-  if (current_octave > 9) current_octave = 9;
+  if (current_octave > 9)
+    current_octave = 9;
 
   // Select the note to play from the pattern
-  Usz* current_pattern = arpPatterns[arp_pattern_index % (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
-  Usz note_to_play_index = current_pattern[note_in_pattern_index] - 1; // Adjusted for 0-based index
- 
+  Usz *current_pattern =
+      arpPatterns[arp_pattern_index %
+                  (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
+  Usz note_to_play_index =
+      current_pattern[note_in_pattern_index] - 1; // Adjusted for 0-based index
+
   Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
   U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
-  if (note_num == UINT8_MAX) return; // Skip if invalid note
+  if (note_num == UINT8_MAX)
+    return; // Skip if invalid note
 
   // Channel, velocity, and length
   U8 channel = (U8)index_of(PEEK(0, 1));
-  U8 velocity = (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
+  U8 velocity =
+      (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
   U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
 
   // Before sending the MIDI note, check if the note to play is a rest (0)
-  if(note_to_play_index == (Usz)-1) { // If it's a rest
-      PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
-      return; // Skip this iteration, ensuring a rest
+  if (note_to_play_index == (Usz)-1) { // If it's a rest
+    PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
+    return;          // Skip this iteration, ensuring a rest
   }
-  
+
   // Use previously declared variables without re-declaration
   note_num = midi_note_number_of(note_gs[note_to_play_index]);
-  if (note_num == UINT8_MAX) return; // Skip if invalid note
+  if (note_num == UINT8_MAX)
+    return; // Skip if invalid note
 
   // Normal note playing logic using already declared variables
   // Note: No need to re-declare 'channel', 'velocity', and 'length' here
 
   // Send MIDI note event
-  Oevent_midi_note *oe = (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+  Oevent_midi_note *oe =
+      (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_note;
   oe->channel = channel;
-  oe->octave = (U8)current_octave; // Maintained from the last note
+  oe->octave = (U8)current_octave;
   oe->note = note_num;
   oe->velocity = velocity;
   oe->duration = (U8)(length & 0x7F);
-  oe->mono = 0;
+  oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
 
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
 
-
-
 // BOORCH's new Random Unique
 #define MAX_SEQUENCE_SIZE 36 // For values 0-9 and A-Z
 
-static struct {
-    Usz sequence[MAX_SEQUENCE_SIZE];
-    Usz current_index;
-    Usz sequence_size;
-    bool initialized;
-} unique_random_state = {0};
+typedef struct {
+  Usz sequence[MAX_SEQUENCE_SIZE];
+  Usz current_index;
+  Usz sequence_size;
+  bool initialized;
+  Usz last_min; // Add these to detect range changes
+  Usz last_max; // and force reinitialization
+} Unique_random_state;
+
+static Unique_random_state unique_random_state = {0};
 
 static void shuffle_sequence(Usz *array, Usz n) {
-    if (n <= 1) return;
-    
-    for (Usz i = n - 1; i > 0; i--) {
-        // Use existing random generator from ORCA
-        Usz j = (Usz)(((U32)rand()) % (i + 1));
-        // Swap
-        Usz temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
+  if (n <= 1)
+    return;
+
+  for (Usz i = n - 1; i > 0; i--) {
+    // Use existing random generator from ORCA
+    Usz j = (Usz)(((U32)rand()) % (i + 1));
+    // Swap
+    Usz temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
 }
 
 static void initialize_sequence(Usz min, Usz max) {
-    unique_random_state.sequence_size = (max >= min) ? (max - min + 1) : 0;
-    if (unique_random_state.sequence_size > MAX_SEQUENCE_SIZE) {
-        unique_random_state.sequence_size = MAX_SEQUENCE_SIZE;
-    }
-    
-    // Fill sequence with values from min to max
-    for (Usz i = 0; i < unique_random_state.sequence_size; i++) {
-        unique_random_state.sequence[i] = min + i;
-    }
-    
-    shuffle_sequence(unique_random_state.sequence, unique_random_state.sequence_size);
-    unique_random_state.current_index = 0;
+  unique_random_state.sequence_size = (max >= min) ? (max - min + 1) : 0;
+  if (unique_random_state.sequence_size > MAX_SEQUENCE_SIZE) {
+    unique_random_state.sequence_size = MAX_SEQUENCE_SIZE;
+  }
+
+  // Fill sequence with values from min to max
+  for (Usz i = 0; i < unique_random_state.sequence_size; i++) {
+    unique_random_state.sequence[i] = min + i;
+  }
+
+  shuffle_sequence(unique_random_state.sequence,
+                   unique_random_state.sequence_size);
+  unique_random_state.current_index = 0;
 }
 
-void reset_last_unique_value(void) {
-    unique_random_state.initialized = false;
-}
+void reset_last_unique_value(void) { unique_random_state.initialized = false; }
 
 BEGIN_OPERATOR(randomunique)
-    LOWERCASE_REQUIRES_BANG;
-    PORT(0, -1, IN | PARAM); // Min
-    PORT(0, 1, IN);          // Max
-    PORT(1, 0, OUT);         // Output
-    
-    Glyph min_glyph = PEEK(0, -1);
-    Glyph max_glyph = PEEK(0, 1);
+  LOWERCASE_REQUIRES_BANG;
+  PORT(0, -1, IN | PARAM); // Min
+  PORT(0, 1, IN);          // Max
+  PORT(1, 0, OUT);         // Output
 
-    if (min_glyph == '.' || max_glyph == '.') {
-        return;
-    }
-    
-    Usz min = index_of(min_glyph);
-    Usz max = index_of(max_glyph);
-    
-    if (max < min) {
-        Usz temp = min;
-        min = max;
-        max = temp;
-    }
+  Glyph min_glyph = PEEK(0, -1);
+  Glyph max_glyph = PEEK(0, 1);
 
-    // Initialize or reinitialize if needed
-    if (!unique_random_state.initialized || 
-        unique_random_state.current_index >= unique_random_state.sequence_size) {
-        initialize_sequence(min, max);
-        unique_random_state.initialized = true;
-    }
-    
-    // Get next value from sequence
-    Usz result = unique_random_state.sequence[unique_random_state.current_index];
-    unique_random_state.current_index++;
-    
-    // Reshuffle if we've used all values
-    if (unique_random_state.current_index >= unique_random_state.sequence_size) {
-        shuffle_sequence(unique_random_state.sequence, unique_random_state.sequence_size);
-        unique_random_state.current_index = 0;
-    }
-    
-    POKE(1, 0, glyph_of(result));
+  if (min_glyph == '.' || max_glyph == '.') {
+    return;
+  }
+
+  Usz min = index_of(min_glyph);
+  Usz max = index_of(max_glyph);
+
+  if (max < min) {
+    Usz temp = min;
+    min = max;
+    max = temp;
+  }
+
+  // Initialize or reinitialize if needed
+  if (!unique_random_state.initialized ||
+      unique_random_state.current_index >= unique_random_state.sequence_size ||
+      min != unique_random_state.last_min ||
+      max != unique_random_state.last_max) {
+    initialize_sequence(min, max);
+    unique_random_state.initialized = true;
+    unique_random_state.last_min = min;
+    unique_random_state.last_max = max;
+  }
+
+  // Get next value from sequence
+  Usz result = unique_random_state.sequence[unique_random_state.current_index];
+  unique_random_state.current_index++;
+
+  // Reshuffle if we've used all values
+  if (unique_random_state.current_index >= unique_random_state.sequence_size) {
+    shuffle_sequence(unique_random_state.sequence,
+                     unique_random_state.sequence_size);
+    unique_random_state.current_index = 0;
+  }
+
+  POKE(1, 0, glyph_of(result));
 END_OPERATOR
-
-
-
-
 
 //////// Run simulation
 

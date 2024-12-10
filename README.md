@@ -113,7 +113,7 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 
 - `P`: Arpeggio Pattern Index (0-9 for predefined patterns)
 - `N`: Note to play (based on selected arpeggio pattern's offset)
-- `R`: Octave range and direction (0-4 for ascending, a-d for descending, 5-9 & e+ act like 0)
+- `R`: Octave range and direction (1-2-3-4 for ascending monophonic, 5-6-7-8 for ascending polyphonic, a-b-c-d for descending monophonic, e-f-g-h for descending polyphonic)
 - `C`, `O`, `N1`, `N2`, `N3`, `V`, `D`: Similar to the MidiChord operator
 
 ### Example
