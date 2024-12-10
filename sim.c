@@ -170,13 +170,13 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('%', midi)                                                                 \
   _('*', bang)                                                                 \
   _(':', midi)                                                                 \
-  _(';', udp)                                                                  \
+  _(';', bouncer)                                                              \
   _('=', osc)                                                                  \
   _('?', midipb)                                                               \
   _('^', scale)                                                                \
   _('|', midichord)                                                            \
   _('$', randomunique)                                                         \
-  _('&', midiarpeggiator)
+  _('&', midiarpeggiator)                                                      
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \
@@ -341,32 +341,32 @@ BEGIN_OPERATOR(midi)
   oe->mono = This_oper_char == '%' ? 1 : 0;
 END_OPERATOR
 
-BEGIN_OPERATOR(udp)
-  Usz n = width - x - 1;
-  if (n > 16)
-    n = 16;
-  Glyph const *restrict gline = gbuffer + y * width + x + 1;
-  Mark *restrict mline = mbuffer + y * width + x + 1;
-  Glyph cpy[Oevent_udp_string_count];
-  Usz i;
-  for (i = 0; i < n; ++i) {
-    Glyph g = gline[i];
-    if (g == '.')
-      break;
-    cpy[i] = g;
-    mline[i] |= Mark_flag_lock;
-  }
-  n = i;
-  STOP_IF_NOT_BANGED;
-  PORT(0, 0, OUT);
-  Oevent_udp_string *oe =
-      (Oevent_udp_string *)oevent_list_alloc_item(extra_params->oevent_list);
-  oe->oevent_type = (U8)Oevent_type_udp_string;
-  oe->count = (U8)n;
-  for (i = 0; i < n; ++i) {
-    oe->chars[i] = cpy[i];
-  }
-END_OPERATOR
+// BEGIN_OPERATOR(udp)
+//   Usz n = width - x - 1;
+//   if (n > 16)
+//     n = 16;
+//   Glyph const *restrict gline = gbuffer + y * width + x + 1;
+//   Mark *restrict mline = mbuffer + y * width + x + 1;
+//   Glyph cpy[Oevent_udp_string_count];
+//   Usz i;
+//   for (i = 0; i < n; ++i) {
+//     Glyph g = gline[i];
+//     if (g == '.')
+//       break;
+//     cpy[i] = g;
+//     mline[i] |= Mark_flag_lock;
+//   }
+//   n = i;
+//   STOP_IF_NOT_BANGED;
+//   PORT(0, 0, OUT);
+//   Oevent_udp_string *oe =
+//       (Oevent_udp_string *)oevent_list_alloc_item(extra_params->oevent_list);
+//   oe->oevent_type = (U8)Oevent_type_udp_string;
+//   oe->count = (U8)n;
+//   for (i = 0; i < n; ++i) {
+//     oe->chars[i] = cpy[i];
+//   }
+// END_OPERATOR
 
 BEGIN_OPERATOR(osc)
   PORT(0, 1, IN | PARAM);
@@ -1188,6 +1188,114 @@ BEGIN_OPERATOR(randomunique)
   }
 
   POKE(1, 0, glyph_of(result));
+END_OPERATOR
+
+// BOORCH's BOUNCER OP
+// State tracking for bouncer operators
+typedef struct {
+  Usz current_value; // Current output value
+  bool going_up;     // Direction flag
+  bool initialized;  // Whether this bouncer has been initialized
+} Bouncer_state;
+
+static Bouncer_state bouncer_states[4096] = {
+    0}; // Should be enough for reasonable grid sizes
+
+BEGIN_OPERATOR(bouncer)
+  PORT(0, -2, IN | PARAM); // Start value
+  PORT(0, -1, IN | PARAM); // End value
+  PORT(0, 1, IN);          // Rate
+  PORT(0, 2, IN);          // Shape
+  PORT(1, 0, OUT);         // Output below
+
+  // Get input values
+  Glyph start_g = PEEK(0, -2);
+  Glyph end_g = PEEK(0, -1);
+  Glyph rate_g = PEEK(0, 1);
+  Glyph shape_g = PEEK(0, 2);
+
+  // Skip if inputs are empty
+  if (start_g == '.' || end_g == '.')
+    return;
+
+  // Calculate state array index based on position
+  Usz state_idx = y * width + x;
+  Bouncer_state *state = &bouncer_states[state_idx];
+
+  // Get actual values
+  Usz start = index_of(start_g);
+  Usz end = index_of(end_g);
+  Usz rate = index_of(rate_g);
+  Usz shape = index_of(shape_g);
+  if (rate == 0)
+    rate = 1;
+
+  // Check for bang to reset
+  if (oper_has_neighboring_bang(gbuffer, height, width, y, x)) {
+    state->current_value = start;
+    state->going_up = start < end;
+    state->initialized = true;
+  }
+
+  // Initialize if needed
+  if (!state->initialized) {
+    state->current_value = start;
+    state->going_up = start < end;
+    state->initialized = true;
+  }
+
+  // Only update on ticks divisible by rate
+  if (Tick_number % rate == 0) {
+    // Calculate the total distance and progress
+    Usz total_distance = end > start ? end - start : start - end;
+    Usz current_progress = state->going_up ? state->current_value - start
+                                           : end - state->current_value;
+
+    // Calculate step size based on shape and position
+    Usz step_size = 1;
+
+    if (shape_g != '.' && shape != 0) {
+      // For sine-like behavior (0-9)
+      if (shape < 10) {
+        // Slower at extremes, faster in middle
+        if (current_progress < total_distance / 4 ||
+            current_progress > (total_distance * 3) / 4) {
+          // Stay on same value occasionally
+          if (Tick_number % (2 + (10 - shape)) != 0)
+            goto output;
+        } else {
+          // Bigger steps in middle
+          step_size = 1 + (shape / 4);
+        }
+      }
+      // For square-like behavior (a-z)
+      else {
+        // Faster transitions with higher shape values
+        step_size = 1 + ((shape - 10) / 5);
+      }
+    }
+
+    // Update value with calculated step size
+    if (state->going_up) {
+      if (state->current_value + step_size >= end) {
+        state->going_up = false;
+        state->current_value = end;
+      } else {
+        state->current_value += step_size;
+      }
+    } else {
+      if (state->current_value <= start + step_size) {
+        state->going_up = true;
+        state->current_value = start;
+      } else {
+        state->current_value -= step_size;
+      }
+    }
+  }
+
+output:
+  // Output current value
+  POKE(1, 0, glyph_of(state->current_value));
 END_OPERATOR
 
 //////// Run simulation

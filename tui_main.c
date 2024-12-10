@@ -651,11 +651,11 @@ staticni void draw_oevent_list(WINDOW *win, Oevent_list const *oevent_list) {
       break;
     }
     case Oevent_type_udp_string: {
-      Oevent_udp_string const *eo = &ev->udp_string;
-      wprintw(win, "UDP\tcount %d\t", (int)eo->count);
-      for (Usz j = 0; j < (Usz)eo->count; ++j) {
-        waddch(win, (chtype)eo->chars[j]);
-      }
+      // Oevent_udp_string const *eo = &ev->udp_string;
+      // wprintw(win, "UDP\tcount %d\t", (int)eo->count);
+      // for (Usz j = 0; j < (Usz)eo->count; ++j) {
+      //   waddch(win, (chtype)eo->chars[j]);
+      // }
       break;
     }
     }
@@ -1163,10 +1163,10 @@ staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
       break;
     }
     case Oevent_type_udp_string: {
-      if (!oosc_dev)
-        continue;
-      Oevent_udp_string const *eo = &e->udp_string;
-      oosc_send_datagram(oosc_dev, eo->chars, eo->count);
+      // if (!oosc_dev)
+      //   continue;
+      // Oevent_udp_string const *eo = &e->udp_string;
+      // oosc_send_datagram(oosc_dev, eo->chars, eo->count);
       break;
     }
     }
@@ -2277,11 +2277,12 @@ static void push_opers_guide_msg(void) {
       {'?', "pb", "Sends MIDI pitch bend."},
       {'%', "mono", "Sends MIDI monophonic note."},
       {'=', "osc", "Sends OSC message."},
-      {';', "udp", "Sends UDP message."},
+      // {';', "udp", "Sends UDP message."},
       {'^', "scale", "Outputs note base on root, scale, degree."},
       {'|', "midichord", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
-      {'&', "midiarpeggiator", "MIDI Arpeggiator"}
+      {'&', "midiarpeggiator", "MIDI Arpeggiator"},
+      {';', "bouncer", "Bouncer"}
       };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
