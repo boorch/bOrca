@@ -162,9 +162,9 @@ To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeg
 *IMPORTANT: Arp patterns `0` to `9` are most likely to be permanent. You can come up with complex sequences using only them and banging the operator in various timings. But the patterns `a` and above are just some experimental combinations and they're likely to change in future updates.
 
 
-## Bouncer (`;`)
+## Bouncer (`;`) (A rudimentary LFO interpretation)
 
-The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some repeating so not super precise), Rate input basically skips every Nth step to make it "scan" through the waveform faster. (e.g: 2 skips every other step, 5 skip every 4 step etc)
+The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some repeating so not super precise), Rate input basically skips every Nth step to make it "scan" through the waveform faster. (e.g: 2 skips every other step, 5 skip every 4 step etc).
 
 ### Inputs
 
@@ -196,3 +196,28 @@ The bouncer operator creates smooth transitions between two values using various
 | 7     | Inv. Saw        | Linear down, instant up                       |
 
 Output value cycles through the chosen waveform pattern between start and end values at the specified rate. Perfect for creating LFO-like modulations or smooth parameter changes.
+
+## MIDI CC Operator (`!`) (Refactored)
+The MIDI CC operator sends MIDI Control Change messages with optional interpolation between values. The control number is specified in hexadecimal (00-FF) using two inputs for high and low nibbles. There's also a "Lerp" input, which compensates a little bit for ORCA's low resolution (base36) output, which "sort of" makes changes slightly smoother. (e.g: when combined witn the Bouncer operator, it can act as a rudimentary LFO for controlling parameters on your synth)
+
+### Inputs
+
+| Operator | Channel | Control High | Control Low | Value | Lerp |
+|:--------:|:-------:|:-----------:|:-----------:|:-----:|:----:|
+|    !     |    C    |     Ch      |     Cl      |   V   |  L   |
+
+- `C`: MIDI channel (0-F)
+- `Ch`: High nibble of control number in hex (0-F)
+- `Cl`: Low nibble of control number in hex (0-F) 
+- `V`: Target value (0-z maps to 0-127)
+- `L`: Interpolation amount (0-z)
+
+### Example
+
+- `!34ACf`
+- Sends MIDI CC #4A (74) on channel 3 with value C, rate f
+- Rate > 0 enables interpolation between current and target value
+- Higher Lerp value means more steps of interpolation (which can result in slower but higher resolution changes)
+- Rate of 0 or `.` disables interpolation
+
+Uses a 128-step resolution for interpolation. The rate determines how many steps to skip per tick - higher rates mean faster but coarser transitions, lower rates mean smoother but slower transitions.
