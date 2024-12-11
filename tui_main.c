@@ -2281,8 +2281,8 @@ static void push_opers_guide_msg(void) {
       {'^', "scale", "Outputs note base on root, scale, degree."},
       {'|', "midichord", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
-      {'&', "midiarpeggiator", "MIDI Arpeggiator"},
-      {';', "bouncer", "Bouncer"}
+      {'&', "midiarpeggiator", "MIDI Arpeggiator."},
+      {';', "bouncer", "A rudimentary LFO-like operator."}
       };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {

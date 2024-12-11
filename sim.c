@@ -1,8 +1,14 @@
 #include "sim.h"
 #include "gbuffer.h"
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+// M_PI
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
@@ -1304,111 +1310,95 @@ BEGIN_OPERATOR(randomunique)
 END_OPERATOR
 
 // BOORCH's BOUNCER OP
-// State tracking for bouncer operators
+// Predefined waveform sequences
+static const char* waveforms[] = {
+    // Triangle (0)
+    "00112233445566778899aabbccddeeffgghhiijjkkllmmnnooppqqrrstuvwxyzzyxwvutsrrqqppoonnmmllkkjjiihhggffeeddccbbaa99887766554433221100",
+    // Inverted Triangle (1)
+    "zzyyxxwwvvuuttssrrqqppoonnmmllkkjjiihhggffeeddccbbaa998876543210012345678899aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz",
+    // Sine (2)
+    "000000011111133333555558888cccfffiiilllooorrruuuwwwxxxyyyyyyzzzzzzzzyyyyyyxxxwwwuuurrrooollliiifffccc888855555333331111110000000",
+    // Inverted Sine (3)
+    "zzzzzzzyyyyyywwwwwtttttrrrrnnnkkkhhheeebbb88855533322211111100000000111111222333555888bbbeeehhhkkknnnrrrrtttttwwwwwyyyyyyzzzzzzz",
+    // Square (4)
+    "0000000000000000000000000000000000000000000000000000000000000000zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    // Inverted Square (5) 
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz0000000000000000000000000000000000000000000000000000000000000000",
+    // Saw (6)
+    "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz",
+    // Inverted Saw (7)
+    "zzzzyyyyxxxxwwwwvvvvuuuuttttssssrrrrqqqqppppoooonnnnmmmmllllkkkkjjjjiiiihhhhggggfffeeedddcccbbbaaa999888777666555444333222111000"
+};
+
+#define WAVE_LENGTH 128
+
 typedef struct {
-  Usz current_value; // Current output value
-  bool going_up;     // Direction flag
-  bool initialized;  // Whether this bouncer has been initialized
+    Usz current_index;  // Current position in waveform
+    bool initialized;
+    Usz last_rate;     // Track rate changes
+    Usz last_shape;    // Track shape changes
 } Bouncer_state;
 
-static Bouncer_state bouncer_states[4096] = {
-    0}; // Should be enough for reasonable grid sizes
+static Bouncer_state bouncer_states[4096] = {0};
 
 BEGIN_OPERATOR(bouncer)
-  PORT(0, -2, IN | PARAM); // Start value
-  PORT(0, -1, IN | PARAM); // End value
-  PORT(0, 1, IN);          // Rate
-  PORT(0, 2, IN);          // Shape
-  PORT(1, 0, OUT);         // Output below
+    PORT(0, -2, IN | PARAM);  // Start value (a)
+    PORT(0, -1, IN | PARAM);  // End value (b)
+    PORT(0, 1, IN);           // Rate (ticks per cycle)
+    PORT(0, 2, IN);           // Shape (0-7 for different waveforms)
+    PORT(1, 0, OUT);
 
-  // Get input values
-  Glyph start_g = PEEK(0, -2);
-  Glyph end_g = PEEK(0, -1);
-  Glyph rate_g = PEEK(0, 1);
-  Glyph shape_g = PEEK(0, 2);
+    Glyph start_g = PEEK(0, -2);
+    Glyph end_g = PEEK(0, -1);
+    Glyph rate_g = PEEK(0, 1);
+    Glyph shape_g = PEEK(0, 2);
 
-  // Skip if inputs are empty
-  if (start_g == '.' || end_g == '.')
-    return;
+    if (start_g == '.' || end_g == '.')
+        return;
 
-  // Calculate state array index based on position
-  Usz state_idx = y * width + x;
-  Bouncer_state *state = &bouncer_states[state_idx];
+    Usz state_idx = y * width + x;
+    Bouncer_state *state = &bouncer_states[state_idx];
+    
+    Usz start = index_of(start_g);
+    Usz end = index_of(end_g);
+    Usz rate = index_of(rate_g);
+    Usz shape = index_of(shape_g);
 
-  // Get actual values
-  Usz start = index_of(start_g);
-  Usz end = index_of(end_g);
-  Usz rate = index_of(rate_g);
-  Usz shape = index_of(shape_g);
-  if (rate == 0)
-    rate = 1;
+    // Initialize or reset on bang
+    if (!state->initialized || 
+        oper_has_neighboring_bang(gbuffer, height, width, y, x) ||
+        rate != state->last_rate ||
+        shape != state->last_shape) {
+        state->current_index = 0;
+        state->initialized = true;
+        state->last_rate = rate;
+        state->last_shape = shape;
+    }
 
-  // Check for bang to reset
-  if (oper_has_neighboring_bang(gbuffer, height, width, y, x)) {
-    state->current_value = start;
-    state->going_up = start < end;
-    state->initialized = true;
-  }
+    // Only advance if rate > 0 
+    if (rate > 0 && rate_g != '.') {
+        state->current_index = (state->current_index + rate) % WAVE_LENGTH;
+    }
 
-  // Initialize if needed
-  if (!state->initialized) {
-    state->current_value = start;
-    state->going_up = start < end;
-    state->initialized = true;
-  }
-
-  // Only update on ticks divisible by rate
-  if (Tick_number % rate == 0) {
-    // Calculate the total distance and progress
-    Usz total_distance = end > start ? end - start : start - end;
-    Usz current_progress = state->going_up ? state->current_value - start
-                                           : end - state->current_value;
-
-    // Calculate step size based on shape and position
-    Usz step_size = 1;
-
-    if (shape_g != '.' && shape != 0) {
-      // For sine-like behavior (0-9)
-      if (shape < 10) {
-        // Slower at extremes, faster in middle
-        if (current_progress < total_distance / 4 ||
-            current_progress > (total_distance * 3) / 4) {
-          // Stay on same value occasionally
-          if (Tick_number % (2 + (10 - shape)) != 0)
-            goto output;
+    // Get raw waveform value first
+    shape = shape < 8 ? shape : 0;
+    char wave_value = waveforms[shape][state->current_index];
+    
+    // Get normalized position (0-1) in waveform range
+    float normalized_pos = (float)index_of(wave_value) / 35.0f;
+    
+    // Map normalized position to output range
+    Usz range = end > start ? end - start : start - end;
+    Usz output_value = start;
+    if (range > 0) {
+        if (end > start) {
+            output_value = start + (Usz)(normalized_pos * (float)range);
         } else {
-          // Bigger steps in middle
-          step_size = 1 + (shape / 4);
+            output_value = start - (Usz)(normalized_pos * (float)range); 
         }
-      }
-      // For square-like behavior (a-z)
-      else {
-        // Faster transitions with higher shape values
-        step_size = 1 + ((shape - 10) / 5);
-      }
     }
 
-    // Update value with calculated step size
-    if (state->going_up) {
-      if (state->current_value + step_size >= end) {
-        state->going_up = false;
-        state->current_value = end;
-      } else {
-        state->current_value += step_size;
-      }
-    } else {
-      if (state->current_value <= start + step_size) {
-        state->going_up = true;
-        state->current_value = start;
-      } else {
-        state->current_value -= step_size;
-      }
-    }
-  }
-
-output:
-  // Output current value
-  POKE(1, 0, glyph_of(state->current_value));
+    POKE(1, 0, glyph_of(output_value));
 END_OPERATOR
 
 //////// Run simulation
