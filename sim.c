@@ -273,7 +273,6 @@ END_OPERATOR
 // END_OPERATOR
 
 // BOORCH's INTERPOLATED MIDI CC
-// BOORCH's INTERPOLATED MIDI CC
 // Updated Midicc_state with floating-point values
 typedef struct {
   bool active;
@@ -315,6 +314,11 @@ BEGIN_OPERATOR(midicc)
   if (rate == 0)
     rate = 1;
 
+// Cap the rate to ensure it does not exceed 24 PPU
+#define MAX_RATE 24
+  if (rate > MAX_RATE)
+    rate = MAX_RATE;
+
   // Calculate steps based on rate for two ticks
   Usz steps = rate * 2; // Ensures interpolation completes within two ticks
   if (steps == 0)
@@ -334,6 +338,15 @@ BEGIN_OPERATOR(midicc)
 
     double current_value = state->current_value;
     double delta = target_value - current_value;
+    state->step_size = delta / (double)steps;
+    if (state->step_size == 0.0)
+      state->step_size = (delta > 0.0) ? 1.0 : -1.0;
+  } else if (state->active) {
+    // If already active, update the target value and recalculate steps
+    double current_value = state->current_value;
+    double delta = target_value - current_value;
+    state->target_value = target_value;
+    state->steps_remaining = steps;
     state->step_size = delta / (double)steps;
     if (state->step_size == 0.0)
       state->step_size = (delta > 0.0) ? 1.0 : -1.0;
