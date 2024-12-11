@@ -1,6 +1,7 @@
 #include "sim.h"
 #include "gbuffer.h"
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -294,25 +295,49 @@ typedef struct {
 #define MAX_SIM_GRID_SIZE 4096 // Adjust based on your grid dimensions
 static Midicc_state midicc_states[MAX_SIM_GRID_SIZE] = {0};
 
-// Updated midicc operator
+// Convert ASCII character to hex value (0-15)
+static inline U8 hex_value(Glyph g) {
+  Usz idx = index_of(g);
+  if (idx <= 9) {
+    return (U8)idx; // 0-9
+  }
+  if (idx >= 10 && idx <= 15) {
+    return (U8)idx; // A-F -> 10-15
+  }
+  return 0;
+}
+
+// Updated midicc operator with HEX value for CC number and optional interpolate (rightmost input, increase resolution mostly at the cost of speed & range)
 BEGIN_OPERATOR(midicc)
-  // Define input ports
-  for (Usz i = 1; i < 5; ++i) {
+  // Define input ports - now with 5 inputs
+  for (Usz i = 1; i < 6; ++i) {
     PORT(0, (Isz)i, IN);
   }
   Glyph channel_g = PEEK(0, 1);
-  Glyph control_g = PEEK(0, 2);
-  Glyph value_g = PEEK(0, 3);
-  Glyph rate_g = PEEK(0, 4);
+  Glyph control_high_g = PEEK(0, 2);
+  Glyph control_low_g = PEEK(0, 3);
+  Glyph value_g = PEEK(0, 4);
+  Glyph rate_g = PEEK(0, 5);
 
   // Validate inputs
-  if (channel_g == '.' || control_g == '.' || value_g == '.')
+  if (channel_g == '.' || control_high_g == '.' || control_low_g == '.' ||
+      value_g == '.')
     return;
 
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  Usz control = index_of(control_g);
+
+  // Calculate control number from high and low parts (hex interpretation)
+  U8 control_high = hex_value(control_high_g); // 0-15
+  U8 control_low = hex_value(control_low_g);   // 0-15
+
+  // Combine as a U8 directly
+  U8 control = (U8)((control_high & 0x0F) << 4) | (control_low & 0x0F);
+
+  // Clamp to valid CC range
+  if (control > 127)
+    control = 127;
 
   // Map glyph value to 0-127 MIDI range
   double target_value = (double)(index_of(value_g) * 127) / 35.0;
@@ -379,7 +404,7 @@ BEGIN_OPERATOR(midicc)
         (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
     oe->oevent_type = Oevent_type_midi_cc;
     oe->channel = (U8)state->channel;
-    oe->control = (U8)state->control;
+    oe->control = control;
     oe->value = (U8)(state->current_value + 0.5); // Rounded to nearest integer
 
     // Update steps remaining and deactivate if done
@@ -1311,94 +1336,100 @@ END_OPERATOR
 
 // BOORCH's BOUNCER OP
 // Predefined waveform sequences
-static const char* waveforms[] = {
+static const char *waveforms[] = {
     // Triangle (0)
-    "00112233445566778899aabbccddeeffgghhiijjkkllmmnnooppqqrrstuvwxyzzyxwvutsrrqqppoonnmmllkkjjiihhggffeeddccbbaa99887766554433221100",
+    "00112233445566778899aabbccddeeffgghhiijjkkllmmnnooppqqrrstuvwxyzzyxwvutsrr"
+    "qqppoonnmmllkkjjiihhggffeeddccbbaa99887766554433221100",
     // Inverted Triangle (1)
-    "zzyyxxwwvvuuttssrrqqppoonnmmllkkjjiihhggffeeddccbbaa998876543210012345678899aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz",
+    "zzyyxxwwvvuuttssrrqqppoonnmmllkkjjiihhggffeeddccbbaa9988765432100123456788"
+    "99aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz",
     // Sine (2)
-    "000000011111133333555558888cccfffiiilllooorrruuuwwwxxxyyyyyyzzzzzzzzyyyyyyxxxwwwuuurrrooollliiifffccc888855555333331111110000000",
+    "000000011111133333555558888cccfffiiilllooorrruuuwwwxxxyyyyyyzzzzzzzzyyyyyy"
+    "xxxwwwuuurrrooollliiifffccc888855555333331111110000000",
     // Inverted Sine (3)
-    "zzzzzzzyyyyyywwwwwtttttrrrrnnnkkkhhheeebbb88855533322211111100000000111111222333555888bbbeeehhhkkknnnrrrrtttttwwwwwyyyyyyzzzzzzz",
+    "zzzzzzzyyyyyywwwwwtttttrrrrnnnkkkhhheeebbb88855533322211111100000000111111"
+    "222333555888bbbeeehhhkkknnnrrrrtttttwwwwwyyyyyyzzzzzzz",
     // Square (4)
-    "0000000000000000000000000000000000000000000000000000000000000000zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
-    // Inverted Square (5) 
-    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz0000000000000000000000000000000000000000000000000000000000000000",
+    "0000000000000000000000000000000000000000000000000000000000000000zzzzzzzzzz"
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    // Inverted Square (5)
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz0000000000"
+    "000000000000000000000000000000000000000000000000000000",
     // Saw (6)
-    "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz",
+    "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffffgggghhhhii"
+    "iijjjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz",
     // Inverted Saw (7)
-    "zzzzyyyyxxxxwwwwvvvvuuuuttttssssrrrrqqqqppppoooonnnnmmmmllllkkkkjjjjiiiihhhhggggfffeeedddcccbbbaaa999888777666555444333222111000"
-};
+    "zzzzyyyyxxxxwwwwvvvvuuuuttttssssrrrrqqqqppppoooonnnnmmmmllllkkkkjjjjiiiihh"
+    "hhggggfffeeedddcccbbbaaa999888777666555444333222111000"};
 
 #define WAVE_LENGTH 128
 
 typedef struct {
-    Usz current_index;  // Current position in waveform
-    bool initialized;
-    Usz last_rate;     // Track rate changes
-    Usz last_shape;    // Track shape changes
+  Usz current_index; // Current position in waveform
+  bool initialized;
+  Usz last_rate;  // Track rate changes
+  Usz last_shape; // Track shape changes
 } Bouncer_state;
 
 static Bouncer_state bouncer_states[4096] = {0};
 
 BEGIN_OPERATOR(bouncer)
-    PORT(0, -2, IN | PARAM);  // Start value (a)
-    PORT(0, -1, IN | PARAM);  // End value (b)
-    PORT(0, 1, IN);           // Rate (ticks per cycle)
-    PORT(0, 2, IN);           // Shape (0-7 for different waveforms)
-    PORT(1, 0, OUT);
+  PORT(0, -2, IN | PARAM); // Start value (a)
+  PORT(0, -1, IN | PARAM); // End value (b)
+  PORT(0, 1, IN);          // Rate (ticks per cycle)
+  PORT(0, 2, IN);          // Shape (0-7 for different waveforms)
+  PORT(1, 0, OUT);
 
-    Glyph start_g = PEEK(0, -2);
-    Glyph end_g = PEEK(0, -1);
-    Glyph rate_g = PEEK(0, 1);
-    Glyph shape_g = PEEK(0, 2);
+  Glyph start_g = PEEK(0, -2);
+  Glyph end_g = PEEK(0, -1);
+  Glyph rate_g = PEEK(0, 1);
+  Glyph shape_g = PEEK(0, 2);
 
-    if (start_g == '.' || end_g == '.')
-        return;
+  if (start_g == '.' || end_g == '.')
+    return;
 
-    Usz state_idx = y * width + x;
-    Bouncer_state *state = &bouncer_states[state_idx];
-    
-    Usz start = index_of(start_g);
-    Usz end = index_of(end_g);
-    Usz rate = index_of(rate_g);
-    Usz shape = index_of(shape_g);
+  Usz state_idx = y * width + x;
+  Bouncer_state *state = &bouncer_states[state_idx];
 
-    // Initialize or reset on bang
-    if (!state->initialized || 
-        oper_has_neighboring_bang(gbuffer, height, width, y, x) ||
-        rate != state->last_rate ||
-        shape != state->last_shape) {
-        state->current_index = 0;
-        state->initialized = true;
-        state->last_rate = rate;
-        state->last_shape = shape;
+  Usz start = index_of(start_g);
+  Usz end = index_of(end_g);
+  Usz rate = index_of(rate_g);
+  Usz shape = index_of(shape_g);
+
+  // Initialize or reset on bang
+  if (!state->initialized ||
+      oper_has_neighboring_bang(gbuffer, height, width, y, x) ||
+      rate != state->last_rate || shape != state->last_shape) {
+    state->current_index = 0;
+    state->initialized = true;
+    state->last_rate = rate;
+    state->last_shape = shape;
+  }
+
+  // Only advance if rate > 0
+  if (rate > 0 && rate_g != '.') {
+    state->current_index = (state->current_index + rate) % WAVE_LENGTH;
+  }
+
+  // Get raw waveform value first
+  shape = shape < 8 ? shape : 0;
+  char wave_value = waveforms[shape][state->current_index];
+
+  // Get normalized position (0-1) in waveform range
+  float normalized_pos = (float)index_of(wave_value) / 35.0f;
+
+  // Map normalized position to output range
+  Usz range = end > start ? end - start : start - end;
+  Usz output_value = start;
+  if (range > 0) {
+    if (end > start) {
+      output_value = start + (Usz)(normalized_pos * (float)range);
+    } else {
+      output_value = start - (Usz)(normalized_pos * (float)range);
     }
+  }
 
-    // Only advance if rate > 0 
-    if (rate > 0 && rate_g != '.') {
-        state->current_index = (state->current_index + rate) % WAVE_LENGTH;
-    }
-
-    // Get raw waveform value first
-    shape = shape < 8 ? shape : 0;
-    char wave_value = waveforms[shape][state->current_index];
-    
-    // Get normalized position (0-1) in waveform range
-    float normalized_pos = (float)index_of(wave_value) / 35.0f;
-    
-    // Map normalized position to output range
-    Usz range = end > start ? end - start : start - end;
-    Usz output_value = start;
-    if (range > 0) {
-        if (end > start) {
-            output_value = start + (Usz)(normalized_pos * (float)range);
-        } else {
-            output_value = start - (Usz)(normalized_pos * (float)range); 
-        }
-    }
-
-    POKE(1, 0, glyph_of(output_value));
+  POKE(1, 0, glyph_of(output_value));
 END_OPERATOR
 
 //////// Run simulation
