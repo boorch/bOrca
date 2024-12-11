@@ -162,3 +162,37 @@ To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeg
 *IMPORTANT: Arp patterns `0` to `9` are most likely to be permanent. You can come up with complex sequences using only them and banging the operator in various timings. But the patterns `a` and above are just some experimental combinations and they're likely to change in future updates.
 
 
+## Bouncer (`;`)
+
+The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some repeating so not super precise), Rate input basically skips every Nth step to make it "scan" through the waveform faster. (e.g: 2 skips every other step, 5 skip every 4 step etc)
+
+### Inputs
+
+| Start Value | End Value | Operator | Rate | Shape |
+|:------:|:------:|:--------:|:------:|:------:|
+|   A    |   B    |    ;     |   R    |   S    |
+
+- `A`: Start value (0-z)
+- `B`: End value (0-z)
+- `R`: Rate - Speed of transition (0-z, higher = faster)
+- `S`: Shape (0-7) - Selects waveform pattern
+
+### Example
+
+- `;3a2C`
+- Transitions between values 3 and a using waveform pattern 2 (Sine) at speed C
+
+#### Waveform Shapes
+
+| Value | Pattern           | Description                                    |
+|-------|------------------|------------------------------------------------|
+| 0     | Triangle         | Linear up then down                            |
+| 1     | Inv. Triangle    | Linear down then up                           |
+| 2     | Sine            | Smooth curved transition up then down          |
+| 3     | Inv. Sine       | Smooth curved transition down then up          |
+| 4     | Square          | Instant switch between min and max            |
+| 5     | Inv. Square     | Instant switch between max and min            |
+| 6     | Saw             | Linear up, instant down                       |
+| 7     | Inv. Saw        | Linear down, instant up                       |
+
+Output value cycles through the chosen waveform pattern between start and end values at the specified rate. Perfect for creating LFO-like modulations or smooth parameter changes.
