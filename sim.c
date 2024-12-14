@@ -541,8 +541,166 @@ END_OPERATOR
 // END_OPERATOR
 
 // BOORCH's MIDIChord operator
-BEGIN_OPERATOR(midichord)
 
+// First, define each chord array:
+static Usz chord_minor[] = {0, 3, 7};
+static Usz chord_major[] = {0, 4, 7};
+static Usz chord_minor7[] = {0, 3, 7, 10};
+static Usz chord_major7[] = {0, 4, 7, 11};
+static Usz chord_minor9[] = {0, 3, 7, 10, 14};
+static Usz chord_major9[] = {0, 4, 7, 11, 14};
+static Usz chord_dom7[] = {0, 4, 7, 10};
+static Usz chord_minor6[] = {0, 3, 7, 9};
+static Usz chord_major6[] = {0, 4, 7, 9};
+static Usz chord_sus2[] = {0, 2, 7};
+static Usz chord_sus4[] = {0, 5, 7};
+static Usz chord_minor_add9[] = {0, 3, 7, 14};
+static Usz chord_major_add9[] = {0, 4, 7, 14};
+static Usz chord_aug[] = {0, 4, 8};
+static Usz chord_aug7[] = {0, 4, 8, 10};
+static Usz chord_min_maj7[] = {0, 3, 7, 11};
+static Usz chord_dim[] = {0, 3, 6};
+static Usz chord_dim7[] = {0, 3, 6, 9};
+static Usz chord_half_dim[] = {0, 3, 6, 10};
+static Usz chord_min_6_9[] = {0, 3, 7, 9, 14};
+static Usz chord_maj_6_9[] = {0, 4, 7, 9, 14};
+static Usz chord_minor_first_inv[] = {0, 3, 10};
+static Usz chord_major_first_inv[] = {0, 4, 11};
+static Usz chord_minor_second_inv[] = {0, 3, 7, 12};
+static Usz chord_major_second_inv[] = {0, 4, 7, 12};
+static Usz chord_min7b5[] = {0, 3, 6, 11};
+static Usz chord_min11[] = {0, 3, 7, 10, 20};
+static Usz chord_dom9[] = {0, 4, 7, 10, 14};
+static Usz chord_dom7b9[] = {0, 4, 7, 10, 15};
+static Usz chord_dom7sharp9[] = {0, 4, 7, 10, 17};
+static Usz chord_maj7sharp11[] = {0, 4, 7, 11, 23};
+static Usz chord_min_add11[] = {0, 3, 7, 14, 20};
+
+// Then create an array-of-pointers to these chord arrays:
+static Usz *chords[] = {chord_minor,
+                        chord_major,
+                        chord_minor7,
+                        chord_major7,
+                        chord_minor9,
+                        chord_major9,
+                        chord_dom7,
+                        chord_minor6,
+                        chord_major6,
+                        chord_sus2,
+                        chord_sus4,
+                        chord_minor_add9,
+                        chord_major_add9,
+                        chord_aug,
+                        chord_aug7,
+                        chord_min_maj7,
+                        chord_dim,
+                        chord_dim7,
+                        chord_half_dim,
+                        chord_min_6_9,
+                        chord_maj_6_9,
+                        chord_minor_first_inv,
+                        chord_major_first_inv,
+                        chord_minor_second_inv,
+                        chord_major_second_inv,
+                        chord_min7b5,
+                        chord_min11,
+                        chord_dom9,
+                        chord_dom7b9,
+                        chord_dom7sharp9,
+                        chord_maj7sharp11,
+                        chord_min_add11};
+
+// Optionally, you could define how many chord arrays there are:
+static const size_t num_chords = sizeof(chords) / sizeof(chords[0]);
+
+// Chord lengths array matching the order of chords array
+static Usz chord_lengths[] = {
+    3, // chord_minor
+    3, // chord_major
+    4, // chord_minor7
+    4, // chord_major7
+    5, // chord_minor9
+    5, // chord_major9
+    4, // chord_dom7
+    4, // chord_minor6
+    4, // chord_major6
+    3, // chord_sus2
+    3, // chord_sus4
+    4, // chord_minor_add9
+    4, // chord_major_add9
+    3, // chord_aug
+    4, // chord_aug7
+    4, // chord_min_maj7
+    3, // chord_dim
+    4, // chord_dim7
+    4, // chord_half_dim
+    5, // chord_min_6_9
+    5, // chord_maj_6_9
+    3, // chord_minor_first_inv
+    3, // chord_major_first_inv
+    4, // chord_minor_second_inv
+    4, // chord_major_second_inv
+    4, // chord_min7b5
+    5, // chord_min11
+    5, // chord_dom9
+    5, // chord_dom7b9
+    5, // chord_dom7sharp9
+    5, // chord_maj7sharp11
+    5  // chord_min_add11
+};
+
+BEGIN_OPERATOR(midichord)
+  // Check all required input ports
+  for (Usz i = 1; i < 7; ++i) {
+    PORT(0, (Isz)i, IN);
+  }
+  STOP_IF_NOT_BANGED;
+
+  // Get chord type first to validate range
+  Usz chord_idx = index_of(PEEK(0, 4));
+  if (chord_idx >= num_chords)
+    return;
+
+  // Get base note information
+  Usz channel = index_of(PEEK(0, 1));
+  if (channel > 15)
+    channel = 15;
+  Usz octave = index_of(PEEK(0, 2));
+  Usz root = index_of(PEEK(0, 3));
+
+  // Get velocity and duration
+  Usz velocity = index_of(PEEK(0, 5));
+  if (velocity > 127)
+    velocity = 127;
+  Usz length = index_of(PEEK(0, 6));
+  if (length == 0)
+    length = 1;
+
+  // Calculate base note number
+  Usz base_note = (octave * 12) + root;
+  if (base_note > 127)
+    return;
+
+  // Get pointer to the selected chord array and its length
+  Usz *chord = chords[chord_idx];
+  Usz chord_len = chord_lengths[chord_idx];
+
+  // Create and output midi events for each note in the chord
+  for (Usz i = 0; i < chord_len; i++) {
+    Usz note = base_note + chord[i];
+    if (note <= 127) { // Only send if within MIDI note range
+      Oevent_midi_note *oe =
+          (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = (U8)channel;
+      oe->octave = (U8)(note / 12);
+      oe->note = (U8)(note % 12);
+      oe->velocity = (U8)velocity;
+      oe->duration = (U8)length;
+      oe->mono = 0;
+    }
+  }
+  PORT(0, 0, OUT);
 END_OPERATOR
 
 BEGIN_OPERATOR(midipb)
@@ -916,21 +1074,21 @@ END_OPERATOR
 // BOORCH's new Scale OP
 
 // Scale intervals with base36 (Orca) to decimal conversion for C
-static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};            // "024579b"
 static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};            // "023578a"
-static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9};        // "02479"
+static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};            // "024579b"
 static Usz minor_pentatonic_scale[] = {0, 3, 5, 7, 10};       // "0357a"
-static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9};          // "023479"
+static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9};        // "02479"
 static Usz blues_minor_scale[] = {0, 3, 5, 6, 7, 10};         // "03567a"
-static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};           // "024679b"
-static Usz whole_scale[] = {0, 2, 4, 6, 8, 10};               // "02468a"
-static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};    // "0134679a"
-static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};    // "013468a"
-static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};          // "013568a"
+static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9};          // "023479"
 static Usz phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10};         // "013578a"
+static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};           // "024679b"
+static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};          // "013568a"
+static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};    // "013468a"
 static Usz neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
 static Usz neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
 static Usz hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10};        // "01358a"
+static Usz whole_scale[] = {0, 2, 4, 6, 8, 10};               // "02468a"
+static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};    // "0134679a"
 static Usz pelog_scale[] = {0, 1, 3, 7, 8};                   // "01378"
 static Usz spanish_scale[] = {0, 1, 4, 5, 7, 8, 10};          // "014578a"
 static Usz bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11};          // "014578b"
@@ -942,22 +1100,22 @@ static Usz enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11};       // "01468ab"
 static Usz scriabin_scale[] = {0, 1, 4, 7, 9};                // "01479"
 static Usz indian_scale[] = {0, 4, 5, 7, 10};                 // "0457a"
 
-// Scale array pointers
-static Usz *scales[] = {major_scale,
-                        minor_scale,
-                        major_pentatonic_scale,
+// Scale array pointers matching the order above
+static Usz *scales[] = {minor_scale,
+                        major_scale,
                         minor_pentatonic_scale,
-                        blues_major_scale,
+                        major_pentatonic_scale,
                         blues_minor_scale,
-                        lydian_scale,
-                        whole_scale,
-                        diminished_scale,
-                        super_locrian_scale,
-                        locrian_scale,
+                        blues_major_scale,
                         phrygian_scale,
+                        lydian_scale,
+                        locrian_scale,
+                        super_locrian_scale,
                         neapolitan_minor_scale,
                         neapolitan_major_scale,
                         hex_phrygian_scale,
+                        whole_scale,
+                        diminished_scale,
                         pelog_scale,
                         spanish_scale,
                         bhairav_scale,
@@ -969,9 +1127,9 @@ static Usz *scales[] = {major_scale,
                         scriabin_scale,
                         indian_scale};
 
-// Lengths of each scale
-static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 6, 8, 7, 7, 7, 7,
-                              7, 6, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
+// Scale lengths matching the order above
+static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 6,
+                              6, 8, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
 
 BEGIN_OPERATOR(scale)
   PORT(0, -2, IN | PARAM); // Root note (0-'b')
