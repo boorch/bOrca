@@ -178,10 +178,10 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('*', bang)                                                                 \
   _(':', midi)                                                                 \
   _(';', bouncer)                                                              \
-  _('=', osc)                                                                  \
+  _('=', midichord)                                                            \
   _('?', midipb)                                                               \
   _('^', scale)                                                                \
-  _('|', midichord)                                                            \
+  _('|', midipoly)                                                             \
   _('$', randomunique)                                                         \
   _('&', midiarpeggiator)
 
@@ -512,32 +512,37 @@ END_OPERATOR
 //   }
 // END_OPERATOR
 
-BEGIN_OPERATOR(osc)
-  PORT(0, 1, IN | PARAM);
-  PORT(0, 2, IN | PARAM);
-  Usz len = index_of(PEEK(0, 2));
-  if (len > Oevent_osc_int_count)
-    len = Oevent_osc_int_count;
-  for (Usz i = 0; i < len; ++i) {
-    PORT(0, (Isz)i + 3, IN);
-  }
-  STOP_IF_NOT_BANGED;
-  Glyph g = PEEK(0, 1);
-  if (g != '.') {
-    PORT(0, 0, OUT);
-    U8 buff[Oevent_osc_int_count];
-    for (Usz i = 0; i < len; ++i) {
-      buff[i] = (U8)index_of(PEEK(0, (Isz)i + 3));
-    }
-    Oevent_osc_ints *oe =
-        &oevent_list_alloc_item(extra_params->oevent_list)->osc_ints;
-    oe->oevent_type = (U8)Oevent_type_osc_ints;
-    oe->glyph = g;
-    oe->count = (U8)len;
-    for (Usz i = 0; i < len; ++i) {
-      oe->numbers[i] = buff[i];
-    }
-  }
+// BEGIN_OPERATOR(osc)
+//   PORT(0, 1, IN | PARAM);
+//   PORT(0, 2, IN | PARAM);
+//   Usz len = index_of(PEEK(0, 2));
+//   if (len > Oevent_osc_int_count)
+//     len = Oevent_osc_int_count;
+//   for (Usz i = 0; i < len; ++i) {
+//     PORT(0, (Isz)i + 3, IN);
+//   }
+//   STOP_IF_NOT_BANGED;
+//   Glyph g = PEEK(0, 1);
+//   if (g != '.') {
+//     PORT(0, 0, OUT);
+//     U8 buff[Oevent_osc_int_count];
+//     for (Usz i = 0; i < len; ++i) {
+//       buff[i] = (U8)index_of(PEEK(0, (Isz)i + 3));
+//     }
+//     Oevent_osc_ints *oe =
+//         &oevent_list_alloc_item(extra_params->oevent_list)->osc_ints;
+//     oe->oevent_type = (U8)Oevent_type_osc_ints;
+//     oe->glyph = g;
+//     oe->count = (U8)len;
+//     for (Usz i = 0; i < len; ++i) {
+//       oe->numbers[i] = buff[i];
+//     }
+//   }
+// END_OPERATOR
+
+// BOORCH's MIDIChord operator
+BEGIN_OPERATOR(midichord)
+
 END_OPERATOR
 
 BEGIN_OPERATOR(midipb)
@@ -1005,8 +1010,8 @@ BEGIN_OPERATOR(scale)
   LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
 END_OPERATOR
 
-//BOORCH's new Midichord OP
-BEGIN_OPERATOR(midichord)
+//BOORCH's new Midipoly OP
+BEGIN_OPERATOR(midipoly)
   for (Usz i = 1; i < 8; ++i) {
     PORT(0, (Isz)i, IN);
   }

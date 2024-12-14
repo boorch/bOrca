@@ -2276,10 +2276,10 @@ static void push_opers_guide_msg(void) {
       {'!', "cc", "Sends MIDI control change."},
       {'?', "pb", "Sends MIDI pitch bend."},
       {'%', "mono", "Sends MIDI monophonic note."},
-      {'=', "osc", "Sends OSC message."},
+      {'=', "midichord", "Sends preset chords over MIDI."},
       // {';', "udp", "Sends UDP message."},
       {'^', "scale", "Outputs note base on root, scale, degree."},
-      {'|', "midichord", "Sends up to 3 MIDI notes."},
+      {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
       {'&', "midiarpeggiator", "MIDI Arpeggiator."},
       {';', "bouncer", "A rudimentary LFO-like operator."}
