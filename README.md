@@ -26,29 +26,28 @@ Outputs "note" based on the provided root note and scale.
 Example:
 - 01^2
 - Input '0': C
-- Input '1': minor
+- Input '1': major
 - Input '2': 3rd
-- Output: 'd' (D#)
-
+- Output: 'd' (E)
 
 
 | Degree | Scale               |
 |:-----:|--------------------------|
-|   0   | Major Scale              |
-|   1   | Minor Scale              |
-|   2   | Major Pentatonic Scale   |
-|   3   | Minor Pentatonic Scale   |
-|   4   | Blues Major Scale        |
-|   5   | Blues Minor Scale        |
-|   6   | Lydian Scale             |
-|   7   | Whole Scale              |
-|   8   | Diminished Scale         |
+|   0   | Minor Scale              |
+|   1   | Major Scale              |
+|   2   | Minor Pentatonic Scale   |
+|   3   | Major Pentatonic Scale   |
+|   4   | Blues Minor Scale        |
+|   5   | Blues Major Scale        |
+|   6   | Phrygian Scale           |
+|   7   | Lydian Scale             |
+|   8   | Locrian Scale            |
 |   9   | Super Locrian Scale      |
-|   a   | Locrian Scale            |
-|   b   | Phrygian Scale           |
-|   c   | Neapolitan Minor Scale   |
-|   d   | Neapolitan Major Scale   |
-|   e   | Hex Phrygian Scale       |
+|   a   | Neapolitan Minor Scale   |
+|   b   | Neapolitan Major Scale   |
+|   c   | Hex Phrygian Scale       |
+|   d   | Whole Scale              |
+|   e   | Diminished Scale         |
 |   f   | Pelog Scale              |
 |   g   | Spanish Scale            |
 |   h   | Bhairav Scale            |
@@ -64,10 +63,10 @@ Scales and offset values taken from
 https://patchstorage.com/author/amiika/
 
 
-## MidiChord Operator (`|`):
+## Midipoly Operator (`|`):
 Extension of Midi operator with 3 input notes. The first note processed is always considered the root note. Every following note is assumed to be "higher" than the previous one. (So no chord inversions sorry)
 
-| Midichord | Channel | Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
+| Midipoly | Channel | Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
 |:---------:|:-------:|:------:|:------:|:------:|:------:|:--------:|:--------:|
 |     \|     |    C    |    O   |   N1   |   N2   |   N3   |    V     |    D     |
 
@@ -83,6 +82,53 @@ Example 3:
 - |03CCCff
 - Plays C3 C4 C5
 
+## Midichord Operator (`=`)
+The Midichord operator outputs MIDI notes to form common chord types based on a root note. It supports various chord types from basic triads to extended chords, including jazz voicings, making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I neve ruse it)
+
+| Operator | Channel | Octave | Root Note | Chord Type | Velocity | Duration |
+|:--------:|:-------:|:------:|:---------:|:----------:|:--------:|:--------:|
+|    =     |    C    |   O    |     R     |     T      |    V     |    D     |
+
+### Example
+- `=13Cff`
+- Plays C major chord (C-E-G) on channel 1, octave 3, full velocity and duration
+
+### Available Chord Types
+
+| Value | Chord Type |
+|:-----:|------------|
+| 0 | Minor |
+| 1 | Major |
+| 2 | Minor 7 |
+| 3 | Major 7 |
+| 4 | Minor 9 |
+| 5 | Major 9 |
+| 6 | Dominant 7 |
+| 7 | Minor 6 |
+| 8 | Major 6 |
+| 9 | Sus2 |
+| a | Sus4 |
+| b | Minor add9 |
+| c | Major add9 |
+| d | Augmented |
+| e | Augmented 7 |
+| f | Minor Major 7 |
+| g | Diminished |
+| h | Diminished 7 |
+| i | Half Diminished |
+| j | Minor 6/9 |
+| k | Major 6/9 |
+| l | Minor First Inversion |
+| m | Major First Inversion |
+| n | Minor Second Inversion |
+| o | Major Second Inversion |
+| p | Minor 7b5 |
+| q | Minor 11 |
+| r | Dominant 9 |
+| s | Dominant 7b9 |
+| t | Dominant 7#9 |
+| u | Major 7#11 |
+| v | Minor add11 |
 
 ## Random Unique Operator (`$`):
 Requires bang. Similar to the Random Operator, but designed to avoid producing identical outputs on consecutive bangs in a creative (in other words, "hacky") manner.
@@ -114,7 +160,7 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 - `P`: Arpeggio Pattern Index (0-9 for predefined patterns)
 - `N`: Note to play (based on selected arpeggio pattern's offset)
 - `R`: Octave range and direction (1-2-3-4 for ascending monophonic, 5-6-7-8 for ascending polyphonic, a-b-c-d for descending monophonic, e-f-g-h for descending polyphonic)
-- `C`, `O`, `N1`, `N2`, `N3`, `V`, `D`: Similar to the MidiChord operator
+- `C`, `O`, `N1`, `N2`, `N3`, `V`, `D`: Similar to the Midipoly operator
 
 ### Example
 
