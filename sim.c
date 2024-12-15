@@ -11,6 +11,43 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+typedef struct {
+  U8 channel;
+  U8 note;
+  U8 octave;
+} Active_midi_note;
+
+#define MAX_ACTIVE_NOTES 256
+static Active_midi_note active_notes[MAX_ACTIVE_NOTES];
+static Usz active_note_count = 0;
+
+// Add this function to send note-off messages for all active notes
+void midi_panic(Oevent_list *oevent_list) {
+  // First send note-offs for all tracked active notes
+  for (Usz i = 0; i < active_note_count; i++) {
+    Oevent_midi_note *oe =
+        (Oevent_midi_note *)oevent_list_alloc_item(oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = active_notes[i].channel;
+    oe->octave = active_notes[i].octave;
+    oe->note = active_notes[i].note;
+    oe->velocity = 0; // Note off
+    oe->duration = 1;
+    oe->mono = 0;
+  }
+
+  // Then send "all notes off" on all channels for good measure
+  for (U8 channel = 0; channel < 16; channel++) {
+    Oevent_midi_cc *oe = (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
+    oe->oevent_type = Oevent_type_midi_cc;
+    oe->channel = channel;
+    oe->control = 123; // All notes off
+    oe->value = 0;
+  }
+
+  active_note_count = 0; // Reset active note tracking
+}
+
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
 
@@ -480,7 +517,6 @@ BEGIN_OPERATOR(midi)
   if (velocity > 127)
     velocity = 127;
 
-  PORT(0, 0, OUT);
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
@@ -492,6 +528,16 @@ BEGIN_OPERATOR(midi)
   // -- we should do something smarter than this.
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = This_oper_char == '%' ? 1 : 0;
+
+  if (active_note_count < MAX_ACTIVE_NOTES) {
+    active_notes[active_note_count].channel = (U8)channel_num;
+    active_notes[active_note_count].note = note_num;
+    active_notes[active_note_count].octave = octave_num;
+    active_note_count++;
+  }
+
+  PORT(0, 0, OUT);
+
 END_OPERATOR
 
 // BEGIN_OPERATOR(udp)
@@ -716,8 +762,17 @@ BEGIN_OPERATOR(midichord)
       oe->velocity = velocity;
       oe->duration = (U8)(length & 0x7Fu);
       oe->mono = 0;
+
+      // Add note tracking
+      if (active_note_count < MAX_ACTIVE_NOTES) {
+        active_notes[active_note_count].channel = (U8)channel;
+        active_notes[active_note_count].note = (U8)(note % 12);
+        active_notes[active_note_count].octave = (U8)(note / 12);
+        active_note_count++;
+      }
     }
   }
+
   PORT(0, 0, OUT);
 END_OPERATOR
 
@@ -1337,6 +1392,14 @@ BEGIN_OPERATOR(midipoly)
     oe->duration = (U8)(length & 0x7F);
     oe->mono = 0;
 
+    // Add note tracking
+    if (active_note_count < MAX_ACTIVE_NOTES) {
+      active_notes[active_note_count].channel = (U8)channel;
+      active_notes[active_note_count].note = note_num;
+      active_notes[active_note_count].octave = (U8)base_octave;
+      active_note_count++;
+    }
+
     PORT(0, 0, OUT);
   }
 
@@ -1523,6 +1586,13 @@ BEGIN_OPERATOR(midiarpeggiator)
   oe->duration = (U8)(length & 0x7F);
   oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
 
+  // Add note tracking
+  if (active_note_count < MAX_ACTIVE_NOTES) {
+    active_notes[active_note_count].channel = channel;
+    active_notes[active_note_count].note = note_num;
+    active_notes[active_note_count].octave = (U8)current_octave;
+    active_note_count++;
+  }
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
 
@@ -1756,6 +1826,10 @@ void orca_run(Glyph *restrict gbuf, Mark *restrict mbuf, Usz height, Usz width,
 #undef UNIQUE_CASE
 #undef ALPHA_CASE
       }
+    }
+
+    if (tick_number == 0) {
+      midi_panic(oevent_list);
     }
   }
 }
