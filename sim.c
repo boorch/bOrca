@@ -1132,16 +1132,20 @@ static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 6,
                               6, 8, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
 
 BEGIN_OPERATOR(scale)
-  PORT(0, 1, IN);  // Root note (like C, c, D etc)
-  PORT(0, 2, IN);  // Scale (0-9, a-o)
-  PORT(0, 3, IN);  // Degree
-  PORT(1, 0, OUT); // Output
+  PORT(0, -1, IN);  // Optional octave input
+  PORT(0, 1, IN);   // Root note (like C, c, D etc)
+  PORT(0, 2, IN);   // Scale (0-9, a-o)
+  PORT(0, 3, IN);   // Degree
+  PORT(1, -1, OUT); // Octave output
+  PORT(1, 0, OUT);  // Note output
 
   // Lock inputs
+  LOCK(0, -1);
   LOCK(0, 1);
   LOCK(0, 2);
   LOCK(0, 3);
 
+  Glyph octave_g = PEEK(0, -1);
   Glyph root_note_glyph = PEEK(0, 1);
   Glyph scale_glyph = PEEK(0, 2);
   Glyph degree_glyph = PEEK(0, 3);
@@ -1152,28 +1156,55 @@ BEGIN_OPERATOR(scale)
     return;
   }
 
-  // Use midi_note_number_of to properly parse note input
+  // Get root note number (0-11)
   U8 root_note_num = midi_note_number_of(root_note_glyph);
   if (root_note_num == UINT8_MAX)
     return;
 
-  // Get root note index within octave (0-11)
-  Usz root_note_index = root_note_num % 12;
+  // Get base octave if provided
+  Usz base_octave = 0;
+  if (octave_g != '.') {
+    base_octave = index_of(octave_g);
+    if (base_octave > 9)
+      base_octave = 9;
+  }
+
+  // Get scale and degree info
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
-  // Rest of validation and processing...
+  // Validate scale
   Usz num_scales = sizeof(scales) / sizeof(scales[0]);
   if (scale_index >= num_scales)
     return;
 
+  // Get scale length and calculate octave increment
   Usz scale_length = scale_lengths[scale_index];
-  Usz note_index =
-      (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
+  Usz octave_increment = degree_index / scale_length;
+
+  // Calculate scale degree within current octave
+  degree_index = degree_index % scale_length;
+  Usz scale_offset = scales[scale_index][degree_index];
+
+  // Calculate total semitones
+  Usz total_semitones = root_note_num + scale_offset;
+
+  // Calculate final note and octave
+  Usz final_note = total_semitones % 12;
+  Usz octave_offset = total_semitones / 12;
+  Usz final_octave = base_octave + octave_increment + octave_offset;
+
+  if (final_octave > 9)
+    return;
 
   // Output note
-  Glyph output_note_glyph = note_sequence[note_index];
+  Glyph output_note_glyph = note_sequence[final_note];
   POKE(1, 0, output_note_glyph);
+
+  // Output octave if input octave was provided
+  if (octave_g != '.') {
+    POKE(1, -1, glyph_of(final_octave));
+  }
 END_OPERATOR
 
 //BOORCH's new Midipoly OP
