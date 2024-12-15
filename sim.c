@@ -924,14 +924,19 @@ END_OPERATOR
 
 BEGIN_OPERATOR(query)
   LOWERCASE_REQUIRES_BANG;
-  Isz in_x = (Isz)index_of(PEEK(0, -3)) + 1;
+
+  // Get parameters in new order: length, y, x
+  Isz len = (Isz)index_of(PEEK(0, -3));
   Isz in_y = (Isz)index_of(PEEK(0, -2));
-  Isz len = (Isz)index_of(PEEK(0, -1));
+  Isz in_x = (Isz)index_of(PEEK(0, -1)) + 1;
+
   Isz out_x = 1 - len;
-  PORT(0, -3, IN | PARAM); // x
+
+  // Mark parameter ports in new order
+  PORT(0, -3, IN | PARAM); // len
   PORT(0, -2, IN | PARAM); // y
-  PORT(0, -1, IN | PARAM); // len
-  // todo direct buffer manip
+  PORT(0, -1, IN | PARAM); // x
+
   for (Isz i = 0; i < len; ++i) {
     PORT(in_y, in_x + i, IN);
     PORT(1, out_x + i, OUT);
@@ -1032,13 +1037,61 @@ END_OPERATOR
 
 BEGIN_OPERATOR(teleport)
   LOWERCASE_REQUIRES_BANG;
-  Isz out_x = (Isz)index_of(PEEK(0, -2));
-  Isz out_y = (Isz)index_of(PEEK(0, -1)) + 1;
-  PORT(0, -2, IN | PARAM); // x
-  PORT(0, -1, IN | PARAM); // y
-  PORT(0, 1, IN);
-  PORT(out_y, out_x, OUT | NONLOCKING);
-  POKE_STUNNED(out_y, out_x, PEEK(0, 1));
+
+  // Get count from leftmost input
+  Usz count = 1;
+  Glyph count_g = PEEK(0, -3);
+  if (count_g != '.' && count_g != '0') {
+    count = index_of(count_g);
+  }
+
+  // Return if count is 0
+  if (count == 0)
+    return;
+
+  // Mark parameter inputs
+  PORT(0, -3, IN | PARAM); // Count
+  PORT(0, -2, IN | PARAM); // Y offset
+  PORT(0, -1, IN | PARAM); // X offset
+
+  // Get offsets
+  Glyph out_y_g = PEEK(0, -2);
+  Glyph out_x_g = PEEK(0, -1);
+
+  // If either offset is '.', treat as 0
+  Usz out_y = out_y_g == '.' ? 0 : index_of(out_y_g);
+  Usz out_x = out_x_g == '.' ? 0 : index_of(out_x_g);
+
+  // Validate offsets based on the rules:
+
+  // Horizontal offset of 0 is only valid with vertical offset >= 1
+  if (out_x == 0 && out_y < 1)
+    return;
+
+  // Horizontal offset of 1 is only valid with count of 1
+  if (out_x == 1 && count > 1)
+    return;
+
+  // For same row (y=0), horizontal offset must be > count
+  if (out_y == 0 && out_x <= count)
+    return;
+
+  // Mark input ports for each input cell
+  for (Usz i = 0; i < count; ++i) {
+    PORT(0, (Isz)i + 1, IN);
+  }
+
+  // Lock and read inputs
+  Glyph inputs[256];
+  for (Usz i = 0; i < count; ++i) {
+    inputs[i] = PEEK(0, (Isz)i + 1);
+  }
+
+  // Write outputs
+  for (Usz i = 0; i < count; ++i) {
+    PORT((Isz)out_y, (Isz)(out_x + i), OUT | NONLOCKING);
+    POKE_STUNNED((Isz)out_y, (Isz)(out_x + i), inputs[i]);
+  }
 END_OPERATOR
 
 BEGIN_OPERATOR(yump)
@@ -1132,23 +1185,23 @@ static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 6,
                               6, 8, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
 
 BEGIN_OPERATOR(scale)
-  PORT(0, -1, IN);  // Optional octave input
-  PORT(0, 1, IN);   // Root note (like C, c, D etc)
-  PORT(0, 2, IN);   // Scale (0-9, a-o)
-  PORT(0, 3, IN);   // Degree
+  PORT(0, 1, IN);   // Octave input
+  PORT(0, 2, IN);   // Root note (like C, c, D etc)
+  PORT(0, 3, IN);   // Scale (0-9, a-o)
+  PORT(0, 4, IN);   // Degree
   PORT(1, -1, OUT); // Octave output
   PORT(1, 0, OUT);  // Note output
 
   // Lock inputs
-  LOCK(0, -1);
   LOCK(0, 1);
   LOCK(0, 2);
   LOCK(0, 3);
+  LOCK(0, 4);
 
-  Glyph octave_g = PEEK(0, -1);
-  Glyph root_note_glyph = PEEK(0, 1);
-  Glyph scale_glyph = PEEK(0, 2);
-  Glyph degree_glyph = PEEK(0, 3);
+  Glyph octave_g = PEEK(0, 1);
+  Glyph root_note_glyph = PEEK(0, 2);
+  Glyph scale_glyph = PEEK(0, 3);
+  Glyph degree_glyph = PEEK(0, 4);
 
   // Handle empty inputs
   if (root_note_glyph == '.' || scale_glyph == '.' || degree_glyph == '.') {
