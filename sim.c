@@ -1135,6 +1135,7 @@ BEGIN_OPERATOR(scale)
   PORT(0, -2, IN | PARAM); // Root note (0-'b')
   PORT(0, -1, IN | PARAM); // Scale
   PORT(0, 1, IN);          // Degree
+  PORT(1, 0, OUT);         // Output
 
   Glyph root_note_glyph = PEEK(0, -2);
   Glyph scale_glyph = PEEK(0, -1);
@@ -1148,8 +1149,7 @@ BEGIN_OPERATOR(scale)
     return;
   }
 
-  Usz root_note_index =
-      index_of(root_note_glyph); // Now directly gives the index
+  Usz root_note_index = index_of(root_note_glyph);
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
