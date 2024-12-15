@@ -279,7 +279,9 @@ Uses a 128-step resolution for interpolation. The rate determines how many steps
 
 
 ## Teleport Operator (`X`) (Refactored)
-Teleport operator can teleport more than 1 glyph now. There's a new input to the left of vertical and horizontal offset inputs, which sets the "lenght of glyphs" to teleport (works similar to how Konkat or Query operators fetch multiple cells).
+Teleport operator can teleport more than 1 glyph now. There's a new input to the left of vertical and horizontal offset inputs, which sets the "length of glyphs" to teleport (works similar to how Konkat or Query operators fetch multiple cells).
+
+Quick Tip: You can use this new 'multiglyph' Teleport along with the Scale operator and teleport the result (which can now include an octave value as well) to a midi operator!
 
 | Length | Vertical Offset | Horizontal Offset | Operator |
 |:--------:|:-------------:|:-----------------:|:-----------:|
