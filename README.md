@@ -288,7 +288,7 @@ Teleport operator can teleport more than 1 glyph now. There's a new input to the
 
 ## Query Operator (`Q`) (Refactored)
 This is a very minor change where the "length" parameter is moved to the left of offset parameters to match the layout of extended Teleport Operator.
-(Previously it was Vertical Offset, Horizontal Offset, Length. Now it's Length, Vertical Offset, Horizontal Offset)
+(Previously the input order was Vertical Offset, Horizontal Offset, Length. Now it's Length, Vertical Offset, Horizontal Offset)
 
 | Length | Vertical Offset | Horizontal Offset | Operator |
 |:--------:|:-------------:|:-----------------:|:-----------:|
