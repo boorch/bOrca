@@ -1132,40 +1132,48 @@ static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 6,
                               6, 8, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
 
 BEGIN_OPERATOR(scale)
-  PORT(0, -2, IN | PARAM); // Root note (0-'b')
-  PORT(0, -1, IN | PARAM); // Scale
-  PORT(0, 1, IN);          // Degree
-  PORT(1, 0, OUT);         // Output
+  PORT(0, 1, IN);  // Root note (like C, c, D etc)
+  PORT(0, 2, IN);  // Scale (0-9, a-o)
+  PORT(0, 3, IN);  // Degree
+  PORT(1, 0, OUT); // Output
 
-  Glyph root_note_glyph = PEEK(0, -2);
-  Glyph scale_glyph = PEEK(0, -1);
-  Glyph degree_glyph = PEEK(0, 1);
+  // Lock inputs
+  LOCK(0, 1);
+  LOCK(0, 2);
+  LOCK(0, 3);
 
-  // If degree is empty, output should also be empty
-  if (degree_glyph == '.') {
-    POKE(1, 0, '.'); // Output empty
-    LOCK(1,
-         0); // Ensure the output is locked to prevent execution as an operator
+  Glyph root_note_glyph = PEEK(0, 1);
+  Glyph scale_glyph = PEEK(0, 2);
+  Glyph degree_glyph = PEEK(0, 3);
+
+  // Handle empty inputs
+  if (root_note_glyph == '.' || scale_glyph == '.' || degree_glyph == '.') {
+    POKE(1, 0, '.');
     return;
   }
 
-  Usz root_note_index = index_of(root_note_glyph);
+  // Use midi_note_number_of to properly parse note input
+  U8 root_note_num = midi_note_number_of(root_note_glyph);
+  if (root_note_num == UINT8_MAX)
+    return;
+
+  // Get root note index within octave (0-11)
+  Usz root_note_index = root_note_num % 12;
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
-  // Ensure valid scale and root note
+  // Rest of validation and processing...
   Usz num_scales = sizeof(scales) / sizeof(scales[0]);
-  if (scale_index >= num_scales || root_note_index > 11)
-    return; // Check root_note_index for valid note range (0-'b')
+  if (scale_index >= num_scales)
+    return;
 
   Usz scale_length = scale_lengths[scale_index];
   Usz note_index =
       (root_note_index + scales[scale_index][degree_index % scale_length]) % 12;
 
-  // Assuming note_sequence is a mapping that aligns with '0'-'b' input for C-B
+  // Output note
   Glyph output_note_glyph = note_sequence[note_index];
-  POKE(1, 0, output_note_glyph); // Output the note
-  LOCK(1, 0); // Ensure the output is locked to prevent execution as an operator
+  POKE(1, 0, output_note_glyph);
 END_OPERATOR
 
 //BOORCH's new Midipoly OP
