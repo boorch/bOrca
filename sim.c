@@ -456,21 +456,30 @@ BEGIN_OPERATOR(midi)
   Usz channel_num = index_of(channel_g);
   if (channel_num > 15)
     channel_num = 15;
-  Usz vel_num;
-  if (velocity_g == '.') {
-    // If no velocity is specified, set it to full.
-    vel_num = 127;
-  } else {
-    vel_num = index_of(velocity_g);
-    // MIDI notes with velocity zero are actually note-offs. (MIDI has two ways
-    // to send note offs. Zero-velocity is the alternate way.) If there is a zero
-    // velocity, we'll just not do anything.
-    if (vel_num == 0)
-      return;
-    vel_num = vel_num * 8 - 1; // 1~16 -> 7~127
-    if (vel_num > 127)
-      vel_num = 127;
-  }
+  // Usz vel_num;
+  // if (velocity_g == '.') {
+  //   // If no velocity is specified, set it to full.
+  //   vel_num = 127;
+  // } else {
+  //   vel_num = index_of(velocity_g);
+  //   // MIDI notes with velocity zero are actually note-offs. (MIDI has two ways
+  //   // to send note offs. Zero-velocity is the alternate way.) If there is a zero
+  //   // velocity, we'll just not do anything.
+  //   if (vel_num == 0)
+  //     return;
+  //   vel_num = vel_num * 8 - 1; // 1~16 -> 7~127
+  //   if (vel_num > 127)
+  //     vel_num = 127;
+  // }
+  U8 velocity =
+      (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+
+  if (velocity == 0)
+    return;
+
+  if (velocity > 127)
+    velocity = 127;
+
   PORT(0, 0, OUT);
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
@@ -478,7 +487,7 @@ BEGIN_OPERATOR(midi)
   oe->channel = (U8)channel_num;
   oe->octave = octave_num;
   oe->note = note_num;
-  oe->velocity = (U8)vel_num;
+  oe->velocity = velocity;
   // Mask used here to suppress bad GCC Wconversion for bitfield. This is bad
   // -- we should do something smarter than this.
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
@@ -668,13 +677,22 @@ BEGIN_OPERATOR(midichord)
   Usz octave = index_of(PEEK(0, 2));
   Usz root = index_of(PEEK(0, 3));
 
-  // Get velocity and duration
-  Usz velocity = index_of(PEEK(0, 5));
+  // Get velocity and duration with standardized handling
+  Glyph velocity_g = PEEK(0, 5);
+  Glyph length_g = PEEK(0, 6);
+
+  // Standardized velocity
+  U8 velocity =
+      (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+
+  if (velocity == 0)
+    return;
+
   if (velocity > 127)
     velocity = 127;
-  Usz length = index_of(PEEK(0, 6));
-  if (length == 0)
-    length = 1;
+
+  // Standardized length handling with same masking as other MIDI ops
+  Usz length = index_of(length_g);
 
   // Calculate base note number
   Usz base_note = (octave * 12) + root;
@@ -695,8 +713,8 @@ BEGIN_OPERATOR(midichord)
       oe->channel = (U8)channel;
       oe->octave = (U8)(note / 12);
       oe->note = (U8)(note % 12);
-      oe->velocity = (U8)velocity;
-      oe->duration = (U8)length;
+      oe->velocity = velocity;
+      oe->duration = (U8)(length & 0x7Fu);
       oe->mono = 0;
     }
   }
@@ -1275,8 +1293,7 @@ BEGIN_OPERATOR(midipoly)
   Usz channel = index_of(channel_g);
   int base_octave =
       (int)index_of(octave_g); // Explicitly cast for safe addition
-  U8 length = (U8)(index_of(length_g) &
-                   0x7Fu); // Correctly declare and initialize length
+  Usz length = index_of(length_g);
 
   if (channel > 15)
     return;
@@ -1303,6 +1320,12 @@ BEGIN_OPERATOR(midipoly)
 
     U8 velocity =
         (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
+
+    if (velocity == 0)
+      return;
+
+    if (velocity > 127)
+      velocity = 127;
 
     Oevent_midi_note *oe =
         (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
@@ -1466,7 +1489,14 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 channel = (U8)index_of(PEEK(0, 1));
   U8 velocity =
       (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
-  U8 length = (U8)(index_of(PEEK(0, 7)) & 0x7Fu);
+
+  if (velocity == 0)
+    return;
+
+  if (velocity > 127)
+    velocity = 127;
+
+  Usz length = index_of(PEEK(0, 7));
 
   // Before sending the MIDI note, check if the note to play is a rest (0)
   if (note_to_play_index == (Usz)-1) { // If it's a rest
