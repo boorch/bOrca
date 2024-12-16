@@ -11,32 +11,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-typedef struct {
-  U8 channel;
-  U8 note;
-  U8 octave;
-} Active_midi_note;
-
-#define MAX_ACTIVE_NOTES 256
-static Active_midi_note active_notes[MAX_ACTIVE_NOTES];
-static Usz active_note_count = 0;
-
 void midi_panic(Oevent_list *oevent_list) {
-  // First send note-offs for all tracked active notes
-  for (Usz i = 0; i < active_note_count; i++) {
-    Oevent_midi_note *oe =
-        (Oevent_midi_note *)oevent_list_alloc_item(oevent_list);
-    oe->oevent_type = Oevent_type_midi_note;
-    oe->channel = active_notes[i].channel;
-    oe->octave = active_notes[i].octave;
-    oe->note = active_notes[i].note;
-    oe->velocity = 0; // Note off
-    oe->duration = 1;
-    oe->mono = 0;
-  }
-
-  // Then send note-offs for ALL possible MIDI notes on all channels
+  // Send note-offs for ALL possible MIDI notes on all channels
   for (U8 channel = 0; channel < 16; channel++) {
+    // Send all notes off
     for (U8 note = 0; note < 128; note++) {
       Oevent_midi_note *oe =
           (Oevent_midi_note *)oevent_list_alloc_item(oevent_list);
@@ -65,8 +43,6 @@ void midi_panic(Oevent_list *oevent_list) {
       oe->value = 0;
     }
   }
-
-  active_note_count = 0; // Reset active note tracking
 }
 
 // stored unique random value
@@ -783,14 +759,6 @@ BEGIN_OPERATOR(midichord)
     oe->velocity = velocity;
     oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
-
-    // Add note tracking
-    if (active_note_count < MAX_ACTIVE_NOTES) {
-      active_notes[active_note_count].channel = (U8)channel;
-      active_notes[active_note_count].note = final_note;
-      active_notes[active_note_count].octave = final_octave;
-      active_note_count++;
-    }
   }
 
   PORT(0, 0, OUT);
@@ -1410,15 +1378,7 @@ BEGIN_OPERATOR(midipoly)
     oe->velocity = velocity;
     oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
-
-    // Add note tracking
-    if (active_note_count < MAX_ACTIVE_NOTES) {
-      active_notes[active_note_count].channel = (U8)channel;
-      active_notes[active_note_count].note = note_num;
-      active_notes[active_note_count].octave = (U8)base_octave;
-      active_note_count++;
-    }
-
+    
     PORT(0, 0, OUT);
   }
 
@@ -1604,14 +1564,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   oe->velocity = velocity;
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
-
-  // Add note tracking
-  if (active_note_count < MAX_ACTIVE_NOTES) {
-    active_notes[active_note_count].channel = channel;
-    active_notes[active_note_count].note = note_num;
-    active_notes[active_note_count].octave = (U8)current_octave;
-    active_note_count++;
-  }
+  
   PORT(0, 0, OUT); // Mark output to indicate operation
 END_OPERATOR
 
