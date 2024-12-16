@@ -772,7 +772,7 @@ void midi_mode_init_osc_bidule(Midi_mode *mm, char const *path) {
 }
 #ifdef FEAT_PORTMIDI
 enum {
-  Portmidi_artificial_latency = 10,
+  Portmidi_artificial_latency = 1,
 };
 struct {
   U64 clock_base;
@@ -1076,149 +1076,6 @@ staticni void ged_stop_all_sustained_notes(Ged *a) {
 // seems redundant/weird", that's because it is, not because there's a good
 // reason.
 
-// staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
-//                                  Usz bpm, Susnote_list *susnote_list,
-//                                  Oevent const *events, Usz count) {
-//   enum { Midi_on_capacity = 512 };
-//   typedef struct {
-//     U8 channel;
-//     U8 note_number;
-//     U8 velocity;
-//   } Midi_note_on;
-//   typedef struct {
-//     U8 note_number;
-//     U8 velocity;
-//     U8 duration;
-//   } Midi_mono_on;
-//   Midi_note_on midi_note_ons[Midi_on_capacity];
-//   Midi_mono_on midi_mono_ons[16]; // Keep only a single one per channel
-//   Susnote new_susnotes[Midi_on_capacity];
-//   Usz midi_note_count = 0;
-//   Usz monofied_chans = 0; // bitset of channels with new mono notes
-//   double frame_secs = 60.0 / (double)bpm / 4.0;
-
-//   for (Usz i = 0; i < count; ++i) {
-//     Oevent const *e = events + i;
-//     switch ((Oevent_types)e->any.oevent_type) {
-//     case Oevent_type_midi_note: {
-//       if (midi_note_count == Midi_on_capacity)
-//         break;
-//       Oevent_midi_note const *em = &e->midi_note;
-//       Usz note_number = (Usz)(12u * em->octave + em->note);
-//       if (note_number > 127)
-//         note_number = 127;
-//       Usz channel = em->channel;
-//       if (channel > 15)
-//         break;
-//       if (em->mono) {
-//         // 'mono' note-ons are strange. The more typical branch you'd expect to
-//         // see, where you can play multiple notes per channel, is below.
-//         monofied_chans |= 1u << (channel & 0xFu);
-//         midi_mono_ons[channel] = (Midi_mono_on){.note_number = (U8)note_number,
-//                                                 .velocity = em->velocity,
-//                                                 .duration = em->duration};
-//       } else {
-//         midi_note_ons[midi_note_count] =
-//             (Midi_note_on){.channel = (U8)channel,
-//                            .note_number = (U8)note_number,
-//                            .velocity = em->velocity};
-//         new_susnotes[midi_note_count] =
-//             (Susnote){.remaining = (float)(frame_secs * (double)em->duration),
-//                       .chan_note = (U16)((channel << 8u) | note_number)};
-//         ++midi_note_count;
-//       }
-//       break;
-//     }
-//     case Oevent_type_midi_cc: {
-//       Oevent_midi_cc const *ec = &e->midi_cc;
-//       // Note that we're not preserving the exact order of MIDI events as
-//       // emitted by the orca VM. Notes and CCs that are emitted in the same
-//       // step will always have the CCs sent first. Not sure if this is OK or
-//       // not. If it's not OK, we can either loop again a second time to always
-//       // send CCs after notes, or if that's not also OK, we can make the stack
-//       // buffer more complicated and interleave the CCs in it.
-//       send_midi_chan_msg(oosc_dev, midi_mode, 0xb, ec->channel, ec->control,
-//                          ec->value);
-//       break;
-//     }
-//     case Oevent_type_midi_pb: {
-//       Oevent_midi_pb const *ep = &e->midi_pb;
-//       // Same caveat regarding ordering with MIDI CC also applies here.
-//       send_midi_chan_msg(oosc_dev, midi_mode, 0xe, ep->channel, ep->lsb,
-//                          ep->msb);
-//       break;
-//     }
-//     case Oevent_type_osc_ints: {
-//       // kinda lame
-//       if (!oosc_dev)
-//         continue;
-//       Oevent_osc_ints const *eo = &e->osc_ints;
-//       char path[] = {'/', eo->glyph, '\0'};
-//       I32 ints[ORCA_ARRAY_COUNTOF(eo->numbers)];
-//       Usz nnum = eo->count;
-//       for (Usz inum = 0; inum < nnum; ++inum) {
-//         ints[inum] = eo->numbers[inum];
-//       }
-//       oosc_send_int32s(oosc_dev, path, ints, nnum);
-//       break;
-//     }
-//     case Oevent_type_udp_string: {
-//       // if (!oosc_dev)
-//       //   continue;
-//       // Oevent_udp_string const *eo = &e->udp_string;
-//       // oosc_send_datagram(oosc_dev, eo->chars, eo->count);
-//       break;
-//     }
-//     }
-//   }
-
-// do_note_ons:
-//   if (midi_note_count > 0) {
-//     Usz start_note_offs, end_note_offs;
-//     susnote_list_add_notes(susnote_list, new_susnotes, midi_note_count,
-//                            &start_note_offs, &end_note_offs);
-//     if (start_note_offs != end_note_offs) {
-//       Susnote const *restrict susnotes_off = susnote_list->buffer;
-//       send_midi_note_offs(oosc_dev, midi_mode, susnotes_off + start_note_offs,
-//                           susnotes_off + end_note_offs);
-//     }
-//     for (Usz i = 0; i < midi_note_count; ++i) {
-//       Midi_note_on mno = midi_note_ons[i];
-//       send_midi_chan_msg(oosc_dev, midi_mode, 0x9, mno.channel, mno.note_number,
-//                          mno.velocity);
-//     }
-//   }
-//   if (monofied_chans) {
-//     // The behavior we end up with is that if regular note-ons are played in
-//     // the same frame/step as a mono, the regular note-ons will have the actual
-//     // MIDI note on sent, followed immediately by a MIDI note off. I don't know
-//     // if this is good or not.
-//     Usz start_note_offs, end_note_offs;
-//     susnote_list_remove_by_chan_mask(susnote_list, monofied_chans,
-//                                      &start_note_offs, &end_note_offs);
-//     if (start_note_offs != end_note_offs) {
-//       Susnote const *restrict susnotes_off = susnote_list->buffer;
-//       send_midi_note_offs(oosc_dev, midi_mode, susnotes_off + start_note_offs,
-//                           susnotes_off + end_note_offs);
-//     }
-//     midi_note_count = 0; // We're going to use this list again. Reset it.
-//     for (Usz i = 0; i < 16; i++) { // Add these notes to list of note-ons
-//       if (!(monofied_chans & 1u << i))
-//         continue;
-//       midi_note_ons[midi_note_count] =
-//           (Midi_note_on){.channel = (U8)i,
-//                          .note_number = midi_mono_ons[i].note_number,
-//                          .velocity = midi_mono_ons[i].velocity};
-//       new_susnotes[midi_note_count] = (Susnote){
-//           .remaining = (float)(frame_secs * (double)midi_mono_ons[i].duration),
-//           .chan_note = (U16)((i << 8u) | midi_mono_ons[i].note_number)};
-//       midi_note_count++;
-//     }
-//     monofied_chans = false;
-//     goto do_note_ons; // lol super wasteful for doing susnotes again
-//   }
-// }
-
 staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
                                  Usz bpm, Susnote_list *susnote_list,
                                  Oevent const *events, Usz count) {
@@ -1233,91 +1090,132 @@ staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
     U8 velocity;
     U8 duration;
   } Midi_mono_on;
-
-  // First process all note-offs for previous notes
-  Usz start_note_offs, end_note_offs;
-  double frame_secs = 60.0 / (double)bpm / 4.0;
-
-  // Track notes per channel
   Midi_note_on midi_note_ons[Midi_on_capacity];
-  Midi_mono_on midi_mono_ons[16];
+  Midi_mono_on midi_mono_ons[16]; // Keep only a single one per channel
   Susnote new_susnotes[Midi_on_capacity];
   Usz midi_note_count = 0;
-  Usz monofied_chans = 0;
+  Usz monofied_chans = 0; // bitset of channels with new mono notes
+  double frame_secs = 60.0 / (double)bpm / 4.0;
 
-  // First pass - send note-offs and collect new notes
   for (Usz i = 0; i < count; ++i) {
     Oevent const *e = events + i;
-    if (e->any.oevent_type == Oevent_type_midi_note) {
-      // Send any pending note-offs for this channel first
+    switch ((Oevent_types)e->any.oevent_type) {
+    case Oevent_type_midi_note: {
+      if (midi_note_count == Midi_on_capacity)
+        break;
       Oevent_midi_note const *em = &e->midi_note;
+      Usz note_number = (Usz)(12u * em->octave + em->note);
+      if (note_number > 127)
+        note_number = 127;
       Usz channel = em->channel;
       if (channel > 15)
-        continue;
-
-      // Add new note to appropriate buffer
+        break;
       if (em->mono) {
+        // 'mono' note-ons are strange. The more typical branch you'd expect to
+        // see, where you can play multiple notes per channel, is below.
         monofied_chans |= 1u << (channel & 0xFu);
-        midi_mono_ons[channel] =
-            (Midi_mono_on){.note_number = (U8)(12u * em->octave + em->note),
-                           .velocity = em->velocity,
-                           .duration = em->duration};
+        midi_mono_ons[channel] = (Midi_mono_on){.note_number = (U8)note_number,
+                                                .velocity = em->velocity,
+                                                .duration = em->duration};
       } else {
-        if (midi_note_count >= Midi_on_capacity)
-          continue;
         midi_note_ons[midi_note_count] =
             (Midi_note_on){.channel = (U8)channel,
-                           .note_number = (U8)(12u * em->octave + em->note),
+                           .note_number = (U8)note_number,
                            .velocity = em->velocity};
         new_susnotes[midi_note_count] =
             (Susnote){.remaining = (float)(frame_secs * (double)em->duration),
-                      .chan_note = (U16)((channel << 8u) |
-                                         (12u * em->octave + em->note))};
-        midi_note_count++;
+                      .chan_note = (U16)((channel << 8u) | note_number)};
+        ++midi_note_count;
       }
+      break;
     }
-    // Handle other event types...
+    case Oevent_type_midi_cc: {
+      Oevent_midi_cc const *ec = &e->midi_cc;
+      // Note that we're not preserving the exact order of MIDI events as
+      // emitted by the orca VM. Notes and CCs that are emitted in the same
+      // step will always have the CCs sent first. Not sure if this is OK or
+      // not. If it's not OK, we can either loop again a second time to always
+      // send CCs after notes, or if that's not also OK, we can make the stack
+      // buffer more complicated and interleave the CCs in it.
+      send_midi_chan_msg(oosc_dev, midi_mode, 0xb, ec->channel, ec->control,
+                         ec->value);
+      break;
+    }
+    case Oevent_type_midi_pb: {
+      Oevent_midi_pb const *ep = &e->midi_pb;
+      // Same caveat regarding ordering with MIDI CC also applies here.
+      send_midi_chan_msg(oosc_dev, midi_mode, 0xe, ep->channel, ep->lsb,
+                         ep->msb);
+      break;
+    }
+    case Oevent_type_osc_ints: {
+      // kinda lame
+      if (!oosc_dev)
+        continue;
+      Oevent_osc_ints const *eo = &e->osc_ints;
+      char path[] = {'/', eo->glyph, '\0'};
+      I32 ints[ORCA_ARRAY_COUNTOF(eo->numbers)];
+      Usz nnum = eo->count;
+      for (Usz inum = 0; inum < nnum; ++inum) {
+        ints[inum] = eo->numbers[inum];
+      }
+      oosc_send_int32s(oosc_dev, path, ints, nnum);
+      break;
+    }
+    case Oevent_type_udp_string: {
+      // if (!oosc_dev)
+      //   continue;
+      // Oevent_udp_string const *eo = &e->udp_string;
+      // oosc_send_datagram(oosc_dev, eo->chars, eo->count);
+      break;
+    }
+    }
   }
 
-  // Second pass - send new notes
+do_note_ons:
   if (midi_note_count > 0) {
-    // Add new notes to sustain list first
+    Usz start_note_offs, end_note_offs;
     susnote_list_add_notes(susnote_list, new_susnotes, midi_note_count,
                            &start_note_offs, &end_note_offs);
-
-    // Send any accumulated note-offs
     if (start_note_offs != end_note_offs) {
-      Susnote const *susnotes_off = susnote_list->buffer;
+      Susnote const *restrict susnotes_off = susnote_list->buffer;
       send_midi_note_offs(oosc_dev, midi_mode, susnotes_off + start_note_offs,
                           susnotes_off + end_note_offs);
     }
-
-    // Send note-ons
     for (Usz i = 0; i < midi_note_count; ++i) {
-      Midi_note_on const *mno = &midi_note_ons[i];
-      send_midi_chan_msg(oosc_dev, midi_mode, 0x9, mno->channel,
-                         mno->note_number, mno->velocity);
+      Midi_note_on mno = midi_note_ons[i];
+      send_midi_chan_msg(oosc_dev, midi_mode, 0x9, mno.channel, mno.note_number,
+                         mno.velocity);
     }
   }
-
-  // Handle mono notes similarly but separately
   if (monofied_chans) {
+    // The behavior we end up with is that if regular note-ons are played in
+    // the same frame/step as a mono, the regular note-ons will have the actual
+    // MIDI note on sent, followed immediately by a MIDI note off. I don't know
+    // if this is good or not.
+    Usz start_note_offs, end_note_offs;
     susnote_list_remove_by_chan_mask(susnote_list, monofied_chans,
                                      &start_note_offs, &end_note_offs);
     if (start_note_offs != end_note_offs) {
-      Susnote const *susnotes_off = susnote_list->buffer;
+      Susnote const *restrict susnotes_off = susnote_list->buffer;
       send_midi_note_offs(oosc_dev, midi_mode, susnotes_off + start_note_offs,
                           susnotes_off + end_note_offs);
     }
-
-    // Send mono notes
-    for (Usz chan = 0; chan < 16; ++chan) {
-      if (!(monofied_chans & (1u << chan)))
+    midi_note_count = 0; // We're going to use this list again. Reset it.
+    for (Usz i = 0; i < 16; i++) { // Add these notes to list of note-ons
+      if (!(monofied_chans & 1u << i))
         continue;
-      Midi_mono_on const *mmo = &midi_mono_ons[chan];
-      send_midi_chan_msg(oosc_dev, midi_mode, 0x9, (U8)chan, mmo->note_number,
-                         mmo->velocity);
+      midi_note_ons[midi_note_count] =
+          (Midi_note_on){.channel = (U8)i,
+                         .note_number = midi_mono_ons[i].note_number,
+                         .velocity = midi_mono_ons[i].velocity};
+      new_susnotes[midi_note_count] = (Susnote){
+          .remaining = (float)(frame_secs * (double)midi_mono_ons[i].duration),
+          .chan_note = (U16)((i << 8u) | midi_mono_ons[i].note_number)};
+      midi_note_count++;
     }
+    monofied_chans = false;
+    goto do_note_ons; // lol super wasteful for doing susnotes again
   }
 }
 
@@ -2384,7 +2282,8 @@ static void push_opers_guide_msg(void) {
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
       {'&', "midiarpeggiator", "MIDI Arpeggiator."},
-      {';', "bouncer", "A rudimentary LFO-like operator."}};
+      {';', "bouncer", "A rudimentary LFO-like operator."}
+      };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
     if (items[i].desc) {
@@ -3747,9 +3646,6 @@ event_loop:;
     t.ged.needs_remarking = true;
     t.ged.is_draw_dirty = true;
     reset_last_unique_value(); // Call this to reset the global unique value
-    break;
-  case CTRL_PLUS('p'):
-    midi_panic(&t.ged.oevent_list);
     break;
   case '[':
     ged_adjust_rulers_relative(&t.ged, 0, -1);
