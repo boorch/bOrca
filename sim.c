@@ -72,7 +72,7 @@ void midi_panic(Oevent_list *oevent_list) {
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
 
-// Note Seuqnce
+// Note Sequence
 static char note_sequence[] = "CcDdEFfGgAaB";
 
 Usz find_note_index(Glyph root_note_glyph) {
@@ -737,12 +737,19 @@ BEGIN_OPERATOR(midichord)
   if (chord_idx >= num_chords)
     return;
 
-  // Get base note information
+  // Get base note information with local scope
   Usz channel = index_of(PEEK(0, 1));
   if (channel > 15)
     channel = 15;
-  Usz octave = index_of(PEEK(0, 2));
-  Usz root = index_of(PEEK(0, 3));
+
+  int base_octave = (int)index_of(PEEK(0, 2));
+  if (base_octave > 9)
+    base_octave = 9;
+
+  // Get root note and validate
+  U8 root_note = midi_note_number_of(PEEK(0, 3));
+  if (root_note == UINT8_MAX)
+    return;
 
   // Get velocity and duration with standardized handling
   Glyph velocity_g = PEEK(0, 5);
@@ -751,43 +758,58 @@ BEGIN_OPERATOR(midichord)
   // Standardized velocity
   U8 velocity =
       (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-
-  // if (velocity == 0)
-  //   return;
-
   if (velocity > 127)
     velocity = 127;
 
-  // Calculate base note number
-  Usz base_note = (octave * 12) + root;
-  if (base_note > 127)
+  // Calculate initial base note absolute value
+  // Change to signed int since we need to do signed arithmetic
+  int base_note_absolute = base_octave * 12 + (int)root_note;
+  if (base_note_absolute > 127)
     return;
 
   // Get pointer to the selected chord array and its length
   Usz *chord = chords[chord_idx];
   Usz chord_len = chord_lengths[chord_idx];
 
+  // Track last note for proper spacing
+  int last_note_absolute = base_note_absolute - 1;
+
   // Create and output midi events for each note in the chord
   for (Usz i = 0; i < chord_len; i++) {
-    Usz note = base_note + chord[i];
-    if (note <= 127) { // Only send if within MIDI note range
-      Oevent_midi_note *oe =
-          (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = (U8)channel;
-      oe->octave = (U8)(note / 12);
-      oe->note = (U8)(note % 12);
-      oe->velocity = velocity;
-      oe->duration = (U8)(index_of(length_g) & 0x7Fu);
-      oe->mono = 0;
+    // Calculate absolute note with interval - explicit cast to handle signedness
+    int note_absolute = base_note_absolute + (int)chord[i];
 
-      // Add note tracking
-      if (active_note_count < MAX_ACTIVE_NOTES) {
-        active_notes[active_note_count].channel = (U8)channel;
-        active_notes[active_note_count].note = (U8)(note % 12);
-        active_notes[active_note_count].octave = (U8)(note / 12);
-        active_note_count++;
-      }
+    // Handle octave wrapping if needed
+    if (note_absolute <= last_note_absolute) {
+      note_absolute += 12;
+    }
+
+    // Validate MIDI range
+    if (note_absolute > 127)
+      continue;
+
+    last_note_absolute = note_absolute;
+
+    // Calculate final octave and note
+    U8 final_octave = (U8)(note_absolute / 12);
+    U8 final_note = (U8)(note_absolute % 12);
+    
+    Oevent_midi_note *oe =
+        (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_note;
+    oe->channel = (U8)channel;
+    oe->octave = final_octave;
+    oe->note = final_note;
+    oe->velocity = velocity;
+    oe->duration = (U8)(index_of(length_g) & 0x7Fu);
+    oe->mono = 0;
+
+    // Add note tracking with correct octave/note
+    if (active_note_count < MAX_ACTIVE_NOTES) {
+      active_notes[active_note_count].channel = (U8)channel;
+      active_notes[active_note_count].note = final_note;
+      active_notes[active_note_count].octave = final_octave;
+      active_note_count++;
     }
   }
 
