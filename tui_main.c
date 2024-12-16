@@ -3641,11 +3641,13 @@ event_loop:;
     ged_input_cmd(&t.ged, Ged_input_cmd_undo);
     break;
   case CTRL_PLUS('r'):
-    midi_panic(&t.ged.oevent_list);
     t.ged.tick_num = 0;
     t.ged.needs_remarking = true;
     t.ged.is_draw_dirty = true;
     reset_last_unique_value(); // Call this to reset the global unique value
+    break;
+  case CTRL_PLUS('p'):
+    midi_panic(&t.ged.oevent_list);
     break;
   case '[':
     ged_adjust_rulers_relative(&t.ged, 0, -1);
