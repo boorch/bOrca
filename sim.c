@@ -38,8 +38,8 @@ void midi_panic(Oevent_list *oevent_list) {
   // Then send note-offs for ALL possible MIDI notes on all channels
   for (U8 channel = 0; channel < 16; channel++) {
     for (U8 note = 0; note < 128; note++) {
-      Oevent_midi_note *oe = 
-          (Oevent_midi_note *)oevent_list_alloc_item(oevent_list); 
+      Oevent_midi_note *oe =
+          (Oevent_midi_note *)oevent_list_alloc_item(oevent_list);
       oe->oevent_type = Oevent_type_midi_note;
       oe->channel = channel;
       oe->octave = note / 12;
@@ -49,12 +49,21 @@ void midi_panic(Oevent_list *oevent_list) {
       oe->mono = 0;
     }
 
-    // Still send "all notes off" CC as backup
-    Oevent_midi_cc *oe = (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
-    oe->oevent_type = Oevent_type_midi_cc;
-    oe->channel = channel;
-    oe->control = 123; // All notes off
-    oe->value = 0;
+    // Send all three MIDI panic CCs
+    U8 panic_ccs[] = {
+        120, // All Sound Off
+        121, // Reset All Controllers
+        123  // All Notes Off
+    };
+
+    for (int i = 0; i < 3; i++) {
+      Oevent_midi_cc *oe =
+          (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
+      oe->oevent_type = Oevent_type_midi_cc;
+      oe->channel = channel;
+      oe->control = panic_ccs[i];
+      oe->value = 0;
+    }
   }
 
   active_note_count = 0; // Reset active note tracking
@@ -523,8 +532,8 @@ BEGIN_OPERATOR(midi)
   U8 velocity =
       (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
 
-  if (velocity == 0)
-    return;
+  // if (velocity == 0)
+  //   return;
 
   if (velocity > 127)
     velocity = 127;
@@ -743,14 +752,11 @@ BEGIN_OPERATOR(midichord)
   U8 velocity =
       (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
 
-  if (velocity == 0)
-    return;
+  // if (velocity == 0)
+  //   return;
 
   if (velocity > 127)
     velocity = 127;
-
-  // Standardized length handling with same masking as other MIDI ops
-  Usz length = index_of(length_g);
 
   // Calculate base note number
   Usz base_note = (octave * 12) + root;
@@ -772,7 +778,7 @@ BEGIN_OPERATOR(midichord)
       oe->octave = (U8)(note / 12);
       oe->note = (U8)(note % 12);
       oe->velocity = velocity;
-      oe->duration = (U8)(length & 0x7Fu);
+      oe->duration = (U8)(index_of(length_g) & 0x7Fu);
       oe->mono = 0;
 
       // Add note tracking
@@ -1360,7 +1366,6 @@ BEGIN_OPERATOR(midipoly)
   Usz channel = index_of(channel_g);
   int base_octave =
       (int)index_of(octave_g); // Explicitly cast for safe addition
-  Usz length = index_of(length_g);
 
   if (channel > 15)
     return;
@@ -1388,8 +1393,8 @@ BEGIN_OPERATOR(midipoly)
     U8 velocity =
         (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
 
-    if (velocity == 0)
-      return;
+    // if (velocity == 0)
+    //   return;
 
     if (velocity > 127)
       velocity = 127;
@@ -1401,7 +1406,7 @@ BEGIN_OPERATOR(midipoly)
     oe->octave = (U8)base_octave;
     oe->note = note_num;
     oe->velocity = velocity;
-    oe->duration = (U8)(length & 0x7F);
+    oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
 
     // Add note tracking
@@ -1565,13 +1570,13 @@ BEGIN_OPERATOR(midiarpeggiator)
   U8 velocity =
       (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
 
-  if (velocity == 0)
-    return;
+  // if (velocity == 0)
+  //   return;
 
   if (velocity > 127)
     velocity = 127;
 
-  Usz length = index_of(PEEK(0, 7));
+  Glyph length_g = PEEK(0, 7);
 
   // Before sending the MIDI note, check if the note to play is a rest (0)
   if (note_to_play_index == (Usz)-1) { // If it's a rest
@@ -1595,7 +1600,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   oe->octave = (U8)current_octave;
   oe->note = note_num;
   oe->velocity = velocity;
-  oe->duration = (U8)(length & 0x7F);
+  oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
 
   // Add note tracking
