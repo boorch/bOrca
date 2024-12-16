@@ -10,4 +10,4 @@ void orca_run(Glyph *restrict gbuffer, Mark *restrict mbuffer, Usz height,
 extern Usz last_random_unique;
 void reset_last_unique_value(void);
 
-
+void midi_panic(Oevent_list *oevent_list);

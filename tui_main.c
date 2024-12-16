@@ -2282,8 +2282,7 @@ static void push_opers_guide_msg(void) {
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
       {'&', "midiarpeggiator", "MIDI Arpeggiator."},
-      {';', "bouncer", "A rudimentary LFO-like operator."}
-      };
+      {';', "bouncer", "A rudimentary LFO-like operator."}};
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
     if (items[i].desc) {
@@ -3642,6 +3641,7 @@ event_loop:;
     ged_input_cmd(&t.ged, Ged_input_cmd_undo);
     break;
   case CTRL_PLUS('r'):
+    midi_panic(&t.ged.oevent_list);
     t.ged.tick_num = 0;
     t.ged.needs_remarking = true;
     t.ged.is_draw_dirty = true;
