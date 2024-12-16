@@ -514,51 +514,33 @@ BEGIN_OPERATOR(midi)
   Usz channel_num = index_of(channel_g);
   if (channel_num > 15)
     channel_num = 15;
-  // Usz vel_num;
-  // if (velocity_g == '.') {
-  //   // If no velocity is specified, set it to full.
-  //   vel_num = 127;
-  // } else {
-  //   vel_num = index_of(velocity_g);
-  //   // MIDI notes with velocity zero are actually note-offs. (MIDI has two ways
-  //   // to send note offs. Zero-velocity is the alternate way.) If there is a zero
-  //   // velocity, we'll just not do anything.
-  //   if (vel_num == 0)
-  //     return;
-  //   vel_num = vel_num * 8 - 1; // 1~16 -> 7~127
-  //   if (vel_num > 127)
-  //     vel_num = 127;
-  // }
-  U8 velocity =
-      (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-
-  // if (velocity == 0)
-  //   return;
-
-  if (velocity > 127)
-    velocity = 127;
-
+  Usz vel_num;
+  if (velocity_g == '.') {
+    // If no velocity is specified, set it to full.
+    vel_num = 127;
+  } else {
+    vel_num = index_of(velocity_g);
+    // MIDI notes with velocity zero are actually note-offs. (MIDI has two ways
+    // to send note offs. Zero-velocity is the alternate way.) If there is a zero
+    // velocity, we'll just not do anything.
+    if (vel_num == 0)
+      return;
+    vel_num = vel_num * 8 - 1; // 1~16 -> 7~127
+    if (vel_num > 127)
+      vel_num = 127;
+  }
+  PORT(0, 0, OUT);
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
   oe->channel = (U8)channel_num;
   oe->octave = octave_num;
   oe->note = note_num;
-  oe->velocity = velocity;
+  oe->velocity = (U8)vel_num;
   // Mask used here to suppress bad GCC Wconversion for bitfield. This is bad
   // -- we should do something smarter than this.
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = This_oper_char == '%' ? 1 : 0;
-
-  if (active_note_count < MAX_ACTIVE_NOTES) {
-    active_notes[active_note_count].channel = (U8)channel_num;
-    active_notes[active_note_count].note = note_num;
-    active_notes[active_note_count].octave = octave_num;
-    active_note_count++;
-  }
-
-  PORT(0, 0, OUT);
-
 END_OPERATOR
 
 // BEGIN_OPERATOR(udp)
@@ -793,7 +775,7 @@ BEGIN_OPERATOR(midichord)
     // Calculate final octave and note
     U8 final_octave = (U8)(note_absolute / 12);
     U8 final_note = (U8)(note_absolute % 12);
-    
+
     Oevent_midi_note *oe =
         (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
     oe->oevent_type = Oevent_type_midi_note;
