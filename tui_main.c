@@ -772,7 +772,7 @@ void midi_mode_init_osc_bidule(Midi_mode *mm, char const *path) {
 }
 #ifdef FEAT_PORTMIDI
 enum {
-  Portmidi_artificial_latency = 1,
+  Portmidi_artificial_latency = 10,
 };
 struct {
   U64 clock_base;
