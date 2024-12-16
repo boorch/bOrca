@@ -347,6 +347,9 @@ BEGIN_OPERATOR(midicc)
   for (Usz i = 1; i < 6; ++i) {
     PORT(0, (Isz)i, IN);
   }
+
+  PORT(0, 0, OUT); // Mark output immediately
+  
   Glyph channel_g = PEEK(0, 1);
   Glyph control_high_g = PEEK(0, 2);
   Glyph control_low_g = PEEK(0, 3);
@@ -473,6 +476,7 @@ BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
     PORT(0, (Isz)i, IN);
   }
+  PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
@@ -505,7 +509,7 @@ BEGIN_OPERATOR(midi)
     if (vel_num > 127)
       vel_num = 127;
   }
-  PORT(0, 0, OUT);
+
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
@@ -688,6 +692,7 @@ BEGIN_OPERATOR(midichord)
   for (Usz i = 1; i < 7; ++i) {
     PORT(0, (Isz)i, IN);
   }
+  PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
 
   // Get chord type first to validate range
@@ -761,13 +766,13 @@ BEGIN_OPERATOR(midichord)
     oe->mono = 0;
   }
 
-  PORT(0, 0, OUT);
 END_OPERATOR
 
 BEGIN_OPERATOR(midipb)
   for (Usz i = 1; i < 4; ++i) {
     PORT(0, (Isz)i, IN);
   }
+  PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph msb_g = PEEK(0, 2);
@@ -777,7 +782,6 @@ BEGIN_OPERATOR(midipb)
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  PORT(0, 0, OUT);
   Oevent_midi_pb *oe =
       (Oevent_midi_pb *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_pb;
@@ -1326,6 +1330,7 @@ BEGIN_OPERATOR(midipoly)
   for (Usz i = 1; i < 8; ++i) {
     PORT(0, (Isz)i, IN);
   }
+  PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
@@ -1378,8 +1383,6 @@ BEGIN_OPERATOR(midipoly)
     oe->velocity = velocity;
     oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
-    
-    PORT(0, 0, OUT);
   }
 
 END_OPERATOR
@@ -1453,6 +1456,8 @@ BEGIN_OPERATOR(midiarpeggiator)
   PORT(0, 5, IN); // Note 3
   PORT(0, 6, IN); // Velocity
   PORT(0, 7, IN); // Length
+
+  PORT(0, 0, OUT); // Mark output immediately
 
   STOP_IF_NOT_BANGED;
 
@@ -1564,8 +1569,7 @@ BEGIN_OPERATOR(midiarpeggiator)
   oe->velocity = velocity;
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
-  
-  PORT(0, 0, OUT); // Mark output to indicate operation
+
 END_OPERATOR
 
 // BOORCH's new Random Unique
