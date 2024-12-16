@@ -724,15 +724,6 @@ BEGIN_OPERATOR(midichord)
   if (channel > 15)
     channel = 15;
 
-  int base_octave = (int)index_of(PEEK(0, 2));
-  if (base_octave > 9)
-    base_octave = 9;
-
-  // Get root note and validate
-  U8 root_note = midi_note_number_of(PEEK(0, 3));
-  if (root_note == UINT8_MAX)
-    return;
-
   // Get velocity and duration with standardized handling
   Glyph velocity_g = PEEK(0, 5);
   Glyph length_g = PEEK(0, 6);
@@ -743,39 +734,46 @@ BEGIN_OPERATOR(midichord)
   if (velocity > 127)
     velocity = 127;
 
-  // Calculate initial base note absolute value
-  // Change to signed int since we need to do signed arithmetic
-  int base_note_absolute = base_octave * 12 + (int)root_note;
-  if (base_note_absolute > 127)
+  // Get initial octave
+  int current_octave = (int)index_of(PEEK(0, 2));
+  if (current_octave > 9)
+    current_octave = 9;
+
+  // Get root note and validate
+  U8 root_note = midi_note_number_of(PEEK(0, 3));
+  if (root_note == UINT8_MAX)
     return;
 
   // Get pointer to the selected chord array and its length
   Usz *chord = chords[chord_idx];
   Usz chord_len = chord_lengths[chord_idx];
 
-  // Track last note for proper spacing
-  int last_note_absolute = base_note_absolute - 1;
+  // Track highest note played so far
+  int last_note_absolute = (current_octave * 12) + root_note - 1;
 
   // Create and output midi events for each note in the chord
   for (Usz i = 0; i < chord_len; i++) {
-    // Calculate absolute note with interval - explicit cast to handle signedness
-    int note_absolute = base_note_absolute + (int)chord[i];
+    // Calculate this note's absolute MIDI note number
+    int note_absolute = (current_octave * 12) + root_note + (int)chord[i];
 
-    // Handle octave wrapping if needed
-    if (note_absolute <= last_note_absolute) {
+    // If this note would be lower than previous note, move it up an octave
+    while (note_absolute <= last_note_absolute) {
+      current_octave++;
       note_absolute += 12;
     }
 
-    // Validate MIDI range
-    if (note_absolute > 127)
+    // Skip if we exceeded MIDI range
+    if (current_octave > 9 || note_absolute > 127)
       continue;
 
+    // Keep track of highest note
     last_note_absolute = note_absolute;
 
-    // Calculate final octave and note
+    // Calculate final octave and note numbers
     U8 final_octave = (U8)(note_absolute / 12);
     U8 final_note = (U8)(note_absolute % 12);
 
+    // Create MIDI event
     Oevent_midi_note *oe =
         (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
     oe->oevent_type = Oevent_type_midi_note;
@@ -786,7 +784,7 @@ BEGIN_OPERATOR(midichord)
     oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
 
-    // Add note tracking with correct octave/note
+    // Add note tracking
     if (active_note_count < MAX_ACTIVE_NOTES) {
       active_notes[active_note_count].channel = (U8)channel;
       active_notes[active_note_count].note = final_note;
