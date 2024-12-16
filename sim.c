@@ -21,7 +21,6 @@ typedef struct {
 static Active_midi_note active_notes[MAX_ACTIVE_NOTES];
 static Usz active_note_count = 0;
 
-// Add this function to send note-off messages for all active notes
 void midi_panic(Oevent_list *oevent_list) {
   // First send note-offs for all tracked active notes
   for (Usz i = 0; i < active_note_count; i++) {
@@ -36,8 +35,21 @@ void midi_panic(Oevent_list *oevent_list) {
     oe->mono = 0;
   }
 
-  // Then send "all notes off" on all channels for good measure
+  // Then send note-offs for ALL possible MIDI notes on all channels
   for (U8 channel = 0; channel < 16; channel++) {
+    for (U8 note = 0; note < 128; note++) {
+      Oevent_midi_note *oe = 
+          (Oevent_midi_note *)oevent_list_alloc_item(oevent_list); 
+      oe->oevent_type = Oevent_type_midi_note;
+      oe->channel = channel;
+      oe->octave = note / 12;
+      oe->note = note % 12;
+      oe->velocity = 0; // Note off
+      oe->duration = 1;
+      oe->mono = 0;
+    }
+
+    // Still send "all notes off" CC as backup
     Oevent_midi_cc *oe = (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
     oe->oevent_type = Oevent_type_midi_cc;
     oe->channel = channel;
