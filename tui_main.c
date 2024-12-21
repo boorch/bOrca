@@ -1015,20 +1015,32 @@ static void send_midi_byte(Oosc_dev *oosc_dev, Midi_mode const *midi_mode,
   send_midi_3bytes(oosc_dev, midi_mode, x, 0, 0);
 }
 
-staticni void //
-send_midi_note_offs(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
-                    Susnote const *start, Susnote const *end) {
+// staticni void //
+// send_midi_note_offs(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
+//                     Susnote const *start, Susnote const *end) {
+//   for (; start != end; ++start) {
+// #if 0
+//     float under = start->remaining;
+//     if (under < 0.0) {
+//       fprintf(stderr, "cutoff slop: %f\n", under);
+//     }
+// #endif
+//     U16 chan_note = start->chan_note;
+//     // send_midi_chan_msg(oosc_dev, midi_mode, 0x8, chan_note >> 8,
+//     //                    chan_note & 0xFF, 0);
+//     U8 channel = (chan_note >> 8) & 0x0F; // Mask to ensure valid channel
+//     send_midi_chan_msg(oosc_dev, midi_mode, 0x8, channel, chan_note & 0xFF, 0);
+//   }
+// }
+static void send_midi_note_offs(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
+                                Susnote const *start, Susnote const *end) {
   for (; start != end; ++start) {
-#if 0
-    float under = start->remaining;
-    if (under < 0.0) {
-      fprintf(stderr, "cutoff slop: %f\n", under);
-    }
-#endif
     U16 chan_note = start->chan_note;
-    // send_midi_chan_msg(oosc_dev, midi_mode, 0x8, chan_note >> 8,
-    //                    chan_note & 0xFF, 0);
-    U8 channel = (chan_note >> 8) & 0x0F; // Mask to ensure valid channel
+    // Original problematic line:
+    // U8 channel = (chan_note >> 8) & 0x0F; // Mask to ensure valid channel
+
+    // Fixed version - remove the & 0x0F mask:
+    U8 channel = (chan_note >> 8);
     send_midi_chan_msg(oosc_dev, midi_mode, 0x8, channel, chan_note & 0xFF, 0);
   }
 }
