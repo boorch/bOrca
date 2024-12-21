@@ -349,7 +349,7 @@ BEGIN_OPERATOR(midicc)
   }
 
   PORT(0, 0, OUT); // Mark output immediately
-  
+
   Glyph channel_g = PEEK(0, 1);
   Glyph control_high_g = PEEK(0, 2);
   Glyph control_low_g = PEEK(0, 3);
@@ -477,6 +477,7 @@ BEGIN_OPERATOR(midi)
     PORT(0, (Isz)i, IN);
   }
   PORT(0, 0, OUT); // Mark output immediately
+
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
