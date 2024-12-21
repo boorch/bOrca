@@ -291,27 +291,27 @@ BEGIN_OPERATOR(movement)
   }
 END_OPERATOR
 
-BEGIN_OPERATOR(midicc)
-  for (Usz i = 1; i < 4; ++i) {
-    PORT(0, (Isz)i, IN);
-  }
-  STOP_IF_NOT_BANGED;
-  Glyph channel_g = PEEK(0, 1);
-  Glyph control_g = PEEK(0, 2);
-  Glyph value_g = PEEK(0, 3);
-  if (channel_g == '.' || control_g == '.')
-    return;
-  Usz channel = index_of(channel_g);
-  if (channel > 15)
-    return;
-  PORT(0, 0, OUT);
-  Oevent_midi_cc *oe =
-      (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
-  oe->oevent_type = Oevent_type_midi_cc;
-  oe->channel = (U8)channel;
-  oe->control = (U8)index_of(control_g);
-  oe->value = (U8)(index_of(value_g) * 127 / 35); // 0~35 -> 0~127
-END_OPERATOR
+// BEGIN_OPERATOR(midicc)
+//   for (Usz i = 1; i < 4; ++i) {
+//     PORT(0, (Isz)i, IN);
+//   }
+//   STOP_IF_NOT_BANGED;
+//   Glyph channel_g = PEEK(0, 1);
+//   Glyph control_g = PEEK(0, 2);
+//   Glyph value_g = PEEK(0, 3);
+//   if (channel_g == '.' || control_g == '.')
+//     return;
+//   Usz channel = index_of(channel_g);
+//   if (channel > 15)
+//     return;
+//   PORT(0, 0, OUT);
+//   Oevent_midi_cc *oe =
+//       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
+//   oe->oevent_type = Oevent_type_midi_cc;
+//   oe->channel = (U8)channel;
+//   oe->control = (U8)index_of(control_g);
+//   oe->value = (U8)(index_of(value_g) * 127 / 35); // 0~35 -> 0~127
+// END_OPERATOR
 
 // BOORCH's INTERPOLATED MIDI CC
 // Updated Midicc_state with floating-point values
@@ -342,116 +342,149 @@ static inline U8 hex_value(Glyph g) {
 }
 
 // Updated midicc operator with HEX value for CC number and optional interpolate (rightmost input, increase resolution mostly at the cost of speed & range)
-// BEGIN_OPERATOR(midicc)
-//   // Define input ports - now with 5 inputs
-//   for (Usz i = 1; i < 6; ++i) {
-//     PORT(0, (Isz)i, IN);
-//   }
+BEGIN_OPERATOR(midicc)
+  // Define input ports - now with 5 inputs
+  for (Usz i = 1; i < 6; ++i) {
+    PORT(0, (Isz)i, IN);
+  }
 
-//   PORT(0, 0, OUT); // Mark output immediately
+  PORT(0, 0, OUT); // Mark output immediately
 
-//   Glyph channel_g = PEEK(0, 1);
-//   Glyph control_high_g = PEEK(0, 2);
-//   Glyph control_low_g = PEEK(0, 3);
-//   Glyph value_g = PEEK(0, 4);
-//   Glyph rate_g = PEEK(0, 5);
+  STOP_IF_NOT_BANGED;
 
-//   // Validate inputs
-//   if (channel_g == '.' || control_high_g == '.' || control_low_g == '.' ||
-//       value_g == '.')
-//     return;
+  // Calculate state index and bounds check
+  Usz state_idx = y * width + x;
+  if (state_idx >= MAX_SIM_GRID_SIZE)
+    return;
 
-//   Usz channel = index_of(channel_g);
-//   if (channel > 15)
-//     return;
+  Midicc_state *state = &midicc_states[state_idx];
 
-//   // Calculate control number from high and low parts (hex interpretation)
-//   U8 control_high = hex_value(control_high_g); // 0-15
-//   U8 control_low = hex_value(control_low_g);   // 0-15
+  // Reset state on first tick
+  if (Tick_number == 0) {
+    state->active = false;
+    state->current_value = 0;
+    state->target_value = 0;
+    state->step_size = 0;
+    state->steps_remaining = 0;
+    state->channel = 0;
+    state->control = 0;
+  }
 
-//   // Combine as a U8 directly
-//   U8 control = (U8)((control_high & 0x0F) << 4) | (control_low & 0x0F);
+  Glyph channel_g = PEEK(0, 1);
+  Glyph control_high_g = PEEK(0, 2);
+  Glyph control_low_g = PEEK(0, 3);
+  Glyph value_g = PEEK(0, 4);
+  Glyph rate_g = PEEK(0, 5);
 
-//   // Clamp to valid CC range
-//   if (control > 127)
-//     control = 127;
+  // Validate inputs
+  if (channel_g == '.' || control_high_g == '.' || control_low_g == '.' ||
+      value_g == '.') {
+    state->active = false;
+    return;
+  }
 
-//   // Map glyph value to 0-127 MIDI range
-//   double target_value = (double)(index_of(value_g) * 127) / 35.0;
-//   Usz rate = index_of(rate_g);
-//   if (rate == 0)
-//     rate = 1;
+  Usz channel = index_of(channel_g);
+  if (channel > 15) {
+    state->active = false;
+    return;
+  }
 
-// // Cap the rate to ensure it does not exceed 24 PPU
-// #define MAX_RATE 24
-//   if (rate > MAX_RATE)
-//     rate = MAX_RATE;
+  // Calculate control number from high and low parts (hex interpretation)
+  U8 control_high = hex_value(control_high_g); // 0-15
+  U8 control_low = hex_value(control_low_g);   // 0-15
+  U8 control = (U8)((control_high & 0x0F) << 4) | (control_low & 0x0F);
 
-//   // Calculate steps based on rate for two ticks
-//   Usz steps = rate * 2; // Ensures interpolation completes within two ticks
-//   if (steps == 0)
-//     steps = 1;
+  // Clamp to valid CC range
+  if (control > 127)
+    control = 127;
 
-//   // Calculate state index based on position
-//   Usz state_idx = y * width + x;
-//   Midicc_state *state = &midicc_states[state_idx];
+  // Map glyph value to 0-127 MIDI range
+  double target_value = (double)(index_of(value_g) * 127) / 35.0;
+  if (target_value > 127.0)
+    target_value = 127.0;
+  if (target_value < 0.0)
+    target_value = 0.0;
 
-//   // On bang, initialize or update the state
-//   if (oper_has_neighboring_bang(gbuffer, height, width, y, x)) {
-//     state->active = true;
-//     state->channel = channel;
-//     state->control = control;
-//     state->target_value = target_value;
-//     state->steps_remaining = steps;
+  Usz rate = index_of(rate_g);
+  if (rate == 0)
+    rate = 1;
 
-//     double current_value = state->current_value;
-//     double delta = target_value - current_value;
-//     state->step_size = delta / (double)steps;
-//     if (state->step_size == 0.0)
-//       state->step_size = (delta > 0.0) ? 1.0 : -1.0;
-//   } else if (state->active) {
-//     // If already active, update the target value and recalculate steps
-//     double current_value = state->current_value;
-//     double delta = target_value - current_value;
-//     state->target_value = target_value;
-//     state->steps_remaining = steps;
-//     state->step_size = delta / (double)steps;
-//     if (state->step_size == 0.0)
-//       state->step_size = (delta > 0.0) ? 1.0 : -1.0;
-//   }
+// Cap the rate to ensure it does not exceed 24 PPU
+#define MAX_RATE 24
+  if (rate > MAX_RATE)
+    rate = MAX_RATE;
 
-//   // If active, send interpolated MIDI CC message
-//   if (state->active && state->steps_remaining > 0) {
-//     state->current_value += state->step_size;
-//     if ((state->step_size > 0.0 &&
-//          state->current_value > state->target_value) ||
-//         (state->step_size < 0.0 &&
-//          state->current_value < state->target_value)) {
-//       state->current_value = state->target_value;
-//     }
+  // Calculate steps based on rate for two ticks
+  Usz steps = rate * 2; // Ensures interpolation completes within two ticks
+  if (steps == 0)
+    steps = 1;
 
-//     // Clamp value to 0-127
-//     if (state->current_value > 127.0)
-//       state->current_value = 127.0;
-//     if (state->current_value < 0.0)
-//       state->current_value = 0.0;
+  // Reset state if channel or control changes
+  if (state->active &&
+      (state->channel != channel || state->control != control)) {
+    state->active = false;
+  }
 
-//     // Allocate and populate MIDI CC event
-//     Oevent_midi_cc *oe =
-//         (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
-//     oe->oevent_type = Oevent_type_midi_cc;
-//     oe->channel = (U8)state->channel;
-//     oe->control = control;
-//     oe->value = (U8)(state->current_value + 0.5); // Rounded to nearest integer
+  // On bang or active state, initialize or update
+  if (oper_has_neighboring_bang(gbuffer, height, width, y, x) ||
+      state->active) {
+    if (!state->active) {
+      // New activation
+      state->active = true;
+      state->channel = channel;
+      state->control = control;
+      state->target_value = target_value;
+      state->current_value =
+          target_value; // Start from target on first activation
+      state->steps_remaining =
+          0; // Will start interpolating on next value change
+    } else {
+      // Already active, update target and recalculate
+      double current_value = state->current_value;
+      double delta = target_value - current_value;
+      state->target_value = target_value;
+      state->steps_remaining = steps;
+      state->step_size = delta / (double)steps;
+      if (state->step_size == 0.0 && delta != 0.0) {
+        state->step_size = (delta > 0.0) ? 1.0 : -1.0;
+      }
+    }
+  }
 
-//     // Update steps remaining and deactivate if done
-//     state->steps_remaining--;
-//     if (state->steps_remaining == 0) {
-//       state->active = false;
-//       state->current_value = state->target_value; // Ensure exact target reached
-//     }
-//   }
-// END_OPERATOR
+  // If active, send interpolated MIDI CC message
+  if (state->active && state->steps_remaining > 0) {
+    state->current_value += state->step_size;
+
+    // Clamp to target value if we've exceeded it
+    if ((state->step_size > 0.0 &&
+         state->current_value > state->target_value) ||
+        (state->step_size < 0.0 &&
+         state->current_value < state->target_value)) {
+      state->current_value = state->target_value;
+    }
+
+    // Clamp to valid MIDI range
+    if (state->current_value > 127.0)
+      state->current_value = 127.0;
+    if (state->current_value < 0.0)
+      state->current_value = 0.0;
+
+    // Allocate and send MIDI CC event
+    Oevent_midi_cc *oe =
+        (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_cc;
+    oe->channel = (U8)state->channel;
+    oe->control = control;
+    oe->value = (U8)(state->current_value + 0.5); // Round to nearest integer
+
+    // Update steps remaining and deactivate if done
+    state->steps_remaining--;
+    if (state->steps_remaining == 0) {
+      state->active = false;
+      state->current_value = state->target_value; // Ensure exact target reached
+    }
+  }
+END_OPERATOR
 
 BEGIN_OPERATOR(comment)
   // restrict probably ok here...
