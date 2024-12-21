@@ -496,8 +496,8 @@ BEGIN_OPERATOR(midicc)
   Glyph control_b = PEEK(0, 3);
   Glyph value_g = PEEK(0, 4);
 
-  if (channel_g == ‘.’ || control_a == ‘.’ || control_b == ‘.’ ||
-      value_g == ‘.’)
+  if (channel_g == '.' || control_a == '.' || control_b == '.' ||
+      value_g == '.')
     return;
   Usz channel = index_of(channel_g);
   if (channel > 15)
