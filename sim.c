@@ -6,45 +6,6 @@
 #include <string.h>
 #include <time.h>
 
-// M_PI
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-void midi_panic(Oevent_list *oevent_list) {
-  // Send note-offs for ALL possible MIDI notes on all channels
-  for (U8 channel = 0; channel < 16; channel++) {
-    // Send all notes off
-    for (U8 note = 0; note < 128; note++) {
-      Oevent_midi_note *oe =
-          (Oevent_midi_note *)oevent_list_alloc_item(oevent_list);
-      oe->oevent_type = Oevent_type_midi_note;
-      oe->channel = channel;
-      oe->octave = note / 12;
-      oe->note = note % 12;
-      oe->velocity = 0; // Note off
-      oe->duration = 1;
-      oe->mono = 0;
-    }
-
-    // Send all three MIDI panic CCs
-    U8 panic_ccs[] = {
-        120, // All Sound Off
-        121, // Reset All Controllers
-        123  // All Notes Off
-    };
-
-    for (int i = 0; i < 3; i++) {
-      Oevent_midi_cc *oe =
-          (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
-      oe->oevent_type = Oevent_type_midi_cc;
-      oe->channel = channel;
-      oe->control = panic_ccs[i];
-      oe->value = 0;
-    }
-  }
-}
-
 // stored unique random value
 Usz last_random_unique = UINT_MAX;
 
@@ -534,8 +495,6 @@ BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
     PORT(0, (Isz)i, IN);
   }
-  PORT(0, 0, OUT); // Mark output immediately
-
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
@@ -555,20 +514,16 @@ BEGIN_OPERATOR(midi)
     channel_num = 15;
   Usz vel_num;
   if (velocity_g == '.') {
-    // If no velocity is specified, set it to full.
     vel_num = 127;
   } else {
     vel_num = index_of(velocity_g);
-    // MIDI notes with velocity zero are actually note-offs. (MIDI has two ways
-    // to send note offs. Zero-velocity is the alternate way.) If there is a zero
-    // velocity, we'll just not do anything.
     if (vel_num == 0)
       return;
-    vel_num = vel_num * 8 - 1; // 1~16 -> 7~127
+    vel_num = vel_num * 8 - 1;
     if (vel_num > 127)
       vel_num = 127;
   }
-
+  PORT(0, 0, OUT);
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
@@ -576,8 +531,6 @@ BEGIN_OPERATOR(midi)
   oe->octave = octave_num;
   oe->note = note_num;
   oe->velocity = (U8)vel_num;
-  // Mask used here to suppress bad GCC Wconversion for bitfield. This is bad
-  // -- we should do something smarter than this.
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
   oe->mono = This_oper_char == '%' ? 1 : 0;
 END_OPERATOR
