@@ -1815,9 +1815,5 @@ void orca_run(Glyph *restrict gbuf, Mark *restrict mbuf, Usz height, Usz width,
 #undef ALPHA_CASE
       }
     }
-
-    if (tick_number == 0) {
-      midi_panic(oevent_list);
-    }
   }
 }
