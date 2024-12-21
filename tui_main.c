@@ -1026,8 +1026,10 @@ send_midi_note_offs(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
     }
 #endif
     U16 chan_note = start->chan_note;
-    send_midi_chan_msg(oosc_dev, midi_mode, 0x8, chan_note >> 8,
-                       chan_note & 0xFF, 0);
+    // send_midi_chan_msg(oosc_dev, midi_mode, 0x8, chan_note >> 8,
+    //                    chan_note & 0xFF, 0);
+    U8 channel = (chan_note >> 8) & 0x0F; // Mask to ensure valid channel
+    send_midi_chan_msg(oosc_dev, midi_mode, 0x8, channel, chan_note & 0xFF, 0);
   }
 }
 
@@ -2282,8 +2284,7 @@ static void push_opers_guide_msg(void) {
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'$', "randomunique", "Outputs non-repeating random value."},
       {'&', "midiarpeggiator", "MIDI Arpeggiator."},
-      {';', "bouncer", "A rudimentary LFO-like operator."}
-      };
+      {';', "bouncer", "A rudimentary LFO-like operator."}};
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
     if (items[i].desc) {
