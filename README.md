@@ -99,7 +99,7 @@ The Midichord operator outputs MIDI notes to form common chord types based on a 
 |    =     |    C    |   O    |     R     |     T      |    V     |    D     |
 
 ### Example
-- `=13Cff`
+- `=13C1ff`
 - Plays C major chord (C-E-G) on channel 1, octave 3, full velocity and duration
 
 ### Available Chord Types
