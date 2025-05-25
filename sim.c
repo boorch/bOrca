@@ -1249,7 +1249,7 @@ static Usz scale_lengths[] = {12, 7, 7, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 5, 6, 5, 4
 BEGIN_OPERATOR(scale)
   PORT(0, 1, IN);   // Octave input
   PORT(0, 2, IN);   // Root note (like C, c, D etc)
-  PORT(0, 3, IN);   // Scale (0-9, a-o)
+  PORT(0, 3, IN);   // Scale (0-9, a-h)
   PORT(0, 4, IN);   // Degree
   PORT(1, -1, OUT); // Octave output
   PORT(1, 0, OUT);  // Note output
