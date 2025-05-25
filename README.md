@@ -189,10 +189,10 @@ To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeg
 | 7             | Diverge             | Inside out (middle notes outward) |
 | 8             | Converge-Diverge    | Converge pattern followed by diverge pattern |
 | 9             | Pinky Up            | Alternate between notes and highest note |
-| 10            | Pinky Up-Down       | Alternate up and down with highest note |
-| 11            | Thumb Up            | Alternate between lowest and other notes |
-| 12            | Thumb Up-Down       | Alternate up and down with lowest note |
-| 13            | Random              | Random selection from scale degrees |
+| a             | Pinky Up-Down       | Alternate up and down with highest note |
+| b             | Thumb Up            | Alternate between lowest and other notes |
+| c             | Thumb Up-Down       | Alternate up and down with lowest note |
+| d             | Random              | Random selection from scale degrees |
 
 
 ## Bouncer (`;`) (A rudimentary LFO interpretation)
