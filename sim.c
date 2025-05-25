@@ -1204,62 +1204,47 @@ END_OPERATOR
 // BOORCH's new Scale OP
 
 // Scale intervals with base36 (Orca) to decimal conversion for C
-static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};            // "023578a"
-static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};            // "024579b"
-static Usz minor_pentatonic_scale[] = {0, 3, 5, 7, 10};       // "0357a"
-static Usz major_pentatonic_scale[] = {0, 2, 4, 7, 9};        // "02479"
-static Usz blues_minor_scale[] = {0, 3, 5, 6, 7, 10};         // "03567a"
-static Usz blues_major_scale[] = {0, 2, 3, 4, 7, 9};          // "023479"
-static Usz phrygian_scale[] = {0, 1, 3, 5, 7, 8, 10};         // "013578a"
-static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};           // "024679b"
-static Usz locrian_scale[] = {0, 1, 3, 5, 6, 8, 10};          // "013568a"
-static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};    // "013468a"
-static Usz neapolitan_minor_scale[] = {0, 1, 3, 5, 7, 8, 11}; // "013578b"
-static Usz neapolitan_major_scale[] = {0, 1, 3, 5, 7, 9, 11}; // "013579b"
-static Usz hex_phrygian_scale[] = {0, 1, 3, 5, 8, 10};        // "01358a"
-static Usz whole_scale[] = {0, 2, 4, 6, 8, 10};               // "02468a"
-static Usz diminished_scale[] = {0, 1, 3, 4, 6, 7, 9, 10};    // "0134679a"
-static Usz pelog_scale[] = {0, 1, 3, 7, 8};                   // "01378"
-static Usz spanish_scale[] = {0, 1, 4, 5, 7, 8, 10};          // "014578a"
-static Usz bhairav_scale[] = {0, 1, 4, 5, 7, 8, 11};          // "014578b"
-static Usz ahirbhairav_scale[] = {0, 1, 4, 5, 7, 9, 10};      // "014579a"
-static Usz augmented2_scale[] = {0, 1, 4, 5, 8, 9};           // "014589"
-static Usz purvi_scale[] = {0, 1, 4, 6, 7, 8, 11};            // "014678b"
-static Usz marva_scale[] = {0, 1, 4, 6, 7, 9, 11};            // "014679b"
-static Usz enigmatic_scale[] = {0, 1, 4, 6, 8, 10, 11};       // "01468ab"
-static Usz scriabin_scale[] = {0, 1, 4, 7, 9};                // "01479"
-static Usz indian_scale[] = {0, 4, 5, 7, 10};                 // "0457a"
+static Usz chromatic_scale[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};   // "0123456789ab"
+static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};                       // "024579b"
+static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};                       // "023578a"
+static Usz dorian_scale[] = {0, 2, 3, 5, 7, 9, 10};                      // "023579a"
+static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};                      // "024679b"
+static Usz mixolydian_scale[] = {0, 2, 4, 5, 7, 9, 10};                  // "024579a"
+static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};               // "013468a"
+static Usz hex_aeolian_scale[] = {0, 3, 5, 7, 8, 10};                    // "03578a"
+static Usz hex_dorian_scale[] = {0, 2, 3, 5, 7, 10};                     // "02357a"
+static Usz blues_scale[] = {0, 3, 5, 6, 7, 10};                          // "03567a"
+static Usz pentatonic_scale[] = {0, 2, 4, 7, 9};                         // "02479"
+static Usz hirajoshi_scale[] = {0, 2, 3, 7, 8};                          // "02378"
+static Usz kumoi_scale[] = {0, 2, 3, 7, 9};                              // "02379"
+static Usz iwato_scale[] = {0, 1, 5, 6, 10};                             // "0156a"
+static Usz whole_tone_scale[] = {0, 2, 4, 6, 8, 10};                     // "02468a"
+static Usz pelog_scale[] = {0, 1, 3, 7, 8};                              // "01378"
+static Usz tetratonic_scale[] = {0, 4, 7, 11};                           // "047b"
+static Usz fifths_scale[] = {0, 7};                                      // "07"
 
 // Scale array pointers matching the order above
-static Usz *scales[] = {minor_scale,
+static Usz *scales[] = {chromatic_scale,
                         major_scale,
-                        minor_pentatonic_scale,
-                        major_pentatonic_scale,
-                        blues_minor_scale,
-                        blues_major_scale,
-                        phrygian_scale,
+                        minor_scale,
+                        dorian_scale,
                         lydian_scale,
-                        locrian_scale,
+                        mixolydian_scale,
                         super_locrian_scale,
-                        neapolitan_minor_scale,
-                        neapolitan_major_scale,
-                        hex_phrygian_scale,
-                        whole_scale,
-                        diminished_scale,
+                        hex_aeolian_scale,
+                        hex_dorian_scale,
+                        blues_scale,
+                        pentatonic_scale,
+                        hirajoshi_scale,
+                        kumoi_scale,
+                        iwato_scale,
+                        whole_tone_scale,
                         pelog_scale,
-                        spanish_scale,
-                        bhairav_scale,
-                        ahirbhairav_scale,
-                        augmented2_scale,
-                        purvi_scale,
-                        marva_scale,
-                        enigmatic_scale,
-                        scriabin_scale,
-                        indian_scale};
+                        tetratonic_scale,
+                        fifths_scale};
 
 // Scale lengths matching the order above
-static Usz scale_lengths[] = {7, 7, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 6,
-                              6, 8, 5, 7, 7, 7, 6, 7, 7, 7, 5, 5};
+static Usz scale_lengths[] = {12, 7, 7, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 5, 6, 5, 4, 2};
 
 BEGIN_OPERATOR(scale)
   PORT(0, 1, IN);   // Octave input

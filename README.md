@@ -27,49 +27,39 @@ Example:
 - ^3C02
 - Input '3': Octave 3 (optional)
 - Input 'C': Root note C
-- Input '0': Minor scale
+- Input '0': Chromatic scale
 - Input '2': 3rd degree
-- Output: '3d' (D#3)
+- Output: '3d' (D3)
 
 Example without octave:
 - ^.C02
 - Input '.': No octave
 - Input 'C': Root note C
-- Input '0': Minor scale  
+- Input '0': Chromatic scale  
 - Input '2': 3rd degree
-- Output: 'd' (D#)
+- Output: 'd' (D)
 
 
 | Scale | Type |
 |:-----:|------|
-|   0   | Minor Scale |
+|   0   | Chromatic Scale |
 |   1   | Major Scale |
-|   2   | Minor Pentatonic Scale |
-|   3   | Major Pentatonic Scale |
-|   4   | Blues Minor Scale |
-|   5   | Blues Major Scale |
-|   6   | Phrygian Scale |
-|   7   | Lydian Scale |
-|   8   | Locrian Scale |
-|   9   | Super Locrian Scale |
-|   a   | Neapolitan Minor Scale |
-|   b   | Neapolitan Major Scale |
-|   c   | Hex Phrygian Scale |
-|   d   | Whole Scale |
-|   e   | Diminished Scale |
+|   2   | Minor Scale |
+|   3   | Dorian Scale |
+|   4   | Lydian Scale |
+|   5   | Mixolydian Scale |
+|   6   | Super Locrian Scale |
+|   7   | Hex Aeolian Scale |
+|   8   | Hex Dorian Scale |
+|   9   | Blues Scale |
+|   a   | Pentatonic Scale |
+|   b   | Hirajoshi Scale |
+|   c   | Kumoi Scale |
+|   d   | Iwato Scale |
+|   e   | Whole Tone Scale |
 |   f   | Pelog Scale |
-|   g   | Spanish Scale |
-|   h   | Bhairav Scale |
-|   i   | Ahirbhairav Scale |
-|   j   | Augmented2 Scale |
-|   k   | Purvi Scale |
-|   l   | Marva Scale |
-|   m   | Enigmatic Scale |
-|   n   | Scriabin Scale |
-|   o   | Indian Scale |
-
-Scales and offset values taken from
-https://patchstorage.com/author/amiika/
+|   g   | Tetratonic Scale |
+|   h   | Fifths Scale |
 
 
 ## Midipoly Operator (`|`):
