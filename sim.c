@@ -1204,47 +1204,37 @@ END_OPERATOR
 // BOORCH's new Scale OP
 
 // Scale intervals with base36 (Orca) to decimal conversion for C
-static Usz chromatic_scale[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};   // "0123456789ab"
-static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};                       // "024579b"
-static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};                       // "023578a"
-static Usz dorian_scale[] = {0, 2, 3, 5, 7, 9, 10};                      // "023579a"
-static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};                      // "024679b"
-static Usz mixolydian_scale[] = {0, 2, 4, 5, 7, 9, 10};                  // "024579a"
-static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10};               // "013468a"
-static Usz hex_aeolian_scale[] = {0, 3, 5, 7, 8, 10};                    // "03578a"
-static Usz hex_dorian_scale[] = {0, 2, 3, 5, 7, 10};                     // "02357a"
-static Usz blues_scale[] = {0, 3, 5, 6, 7, 10};                          // "03567a"
-static Usz pentatonic_scale[] = {0, 2, 4, 7, 9};                         // "02479"
-static Usz hirajoshi_scale[] = {0, 2, 3, 7, 8};                          // "02378"
-static Usz kumoi_scale[] = {0, 2, 3, 7, 9};                              // "02379"
-static Usz iwato_scale[] = {0, 1, 5, 6, 10};                             // "0156a"
-static Usz whole_tone_scale[] = {0, 2, 4, 6, 8, 10};                     // "02468a"
-static Usz pelog_scale[] = {0, 1, 3, 7, 8};                              // "01378"
-static Usz tetratonic_scale[] = {0, 4, 7, 11};                           // "047b"
-static Usz fifths_scale[] = {0, 7};                                      // "07"
+static Usz chromatic_scale[] = {0, 1, 2, 3, 4,  5,
+                                6, 7, 8, 9, 10, 11};       // "0123456789ab"
+static Usz major_scale[] = {0, 2, 4, 5, 7, 9, 11};         // "024579b"
+static Usz minor_scale[] = {0, 2, 3, 5, 7, 8, 10};         // "023578a"
+static Usz dorian_scale[] = {0, 2, 3, 5, 7, 9, 10};        // "023579a"
+static Usz lydian_scale[] = {0, 2, 4, 6, 7, 9, 11};        // "024679b"
+static Usz mixolydian_scale[] = {0, 2, 4, 5, 7, 9, 10};    // "024579a"
+static Usz super_locrian_scale[] = {0, 1, 3, 4, 6, 8, 10}; // "013468a"
+static Usz hex_aeolian_scale[] = {0, 3, 5, 7, 8, 10};      // "03578a"
+static Usz hex_dorian_scale[] = {0, 2, 3, 5, 7, 10};       // "02357a"
+static Usz blues_scale[] = {0, 3, 5, 6, 7, 10};            // "03567a"
+static Usz pentatonic_scale[] = {0, 2, 4, 7, 9};           // "02479"
+static Usz hirajoshi_scale[] = {0, 2, 3, 7, 8};            // "02378"
+static Usz kumoi_scale[] = {0, 2, 3, 7, 9};                // "02379"
+static Usz iwato_scale[] = {0, 1, 5, 6, 10};               // "0156a"
+static Usz whole_tone_scale[] = {0, 2, 4, 6, 8, 10};       // "02468a"
+static Usz pelog_scale[] = {0, 1, 3, 7, 8};                // "01378"
+static Usz tetratonic_scale[] = {0, 4, 7, 11};             // "047b"
+static Usz fifths_scale[] = {0, 7};                        // "07"
 
 // Scale array pointers matching the order above
-static Usz *scales[] = {chromatic_scale,
-                        major_scale,
-                        minor_scale,
-                        dorian_scale,
-                        lydian_scale,
-                        mixolydian_scale,
-                        super_locrian_scale,
-                        hex_aeolian_scale,
-                        hex_dorian_scale,
-                        blues_scale,
-                        pentatonic_scale,
-                        hirajoshi_scale,
-                        kumoi_scale,
-                        iwato_scale,
-                        whole_tone_scale,
-                        pelog_scale,
-                        tetratonic_scale,
-                        fifths_scale};
+static Usz *scales[] = {
+    chromatic_scale,  major_scale,      minor_scale,         dorian_scale,
+    lydian_scale,     mixolydian_scale, super_locrian_scale, hex_aeolian_scale,
+    hex_dorian_scale, blues_scale,      pentatonic_scale,    hirajoshi_scale,
+    kumoi_scale,      iwato_scale,      whole_tone_scale,    pelog_scale,
+    tetratonic_scale, fifths_scale};
 
 // Scale lengths matching the order above
-static Usz scale_lengths[] = {12, 7, 7, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 5, 6, 5, 4, 2};
+static Usz scale_lengths[] = {12, 7, 7, 7, 7, 7, 7, 6, 6,
+                              6,  5, 5, 5, 5, 6, 5, 4, 2};
 
 BEGIN_OPERATOR(scale)
   PORT(0, 1, IN);   // Octave input
@@ -1385,188 +1375,374 @@ BEGIN_OPERATOR(midipoly)
 END_OPERATOR
 
 // BOORCH's new MidiArpeggiator
-// Arpeggio patterns
-static Usz arp00[] = {1, 2, 3};          // up
-static Usz arp01[] = {3, 2, 1};          // down
-static Usz arp02[] = {1, 3, 2};          // converge up
-static Usz arp03[] = {3, 1, 2};          // converge down
-static Usz arp04[] = {2, 1, 3};          // diverge up
-static Usz arp05[] = {2, 3, 1};          // diverge down
-static Usz arp06[] = {1, 2, 3, 2};       // up bounce triangle
-static Usz arp07[] = {3, 2, 1, 2};       // down bounce triangle
-static Usz arp08[] = {1, 2, 3, 3, 2, 1}; // up bounce sine
-static Usz arp09[] = {3, 2, 1, 1, 2, 3}; // down bounce sine
-static Usz arp10[] = {1, 2, 3, 0};       // up with rest
-static Usz arp11[] = {3, 2, 1, 0};       // down with rest
-static Usz arp12[] = {1, 3, 2, 0};       // converge up with rest
-static Usz arp13[] = {3, 1, 2, 0};       // converge down with rest
-static Usz arp14[] = {2, 1, 3, 0};       // diverge up with rest
-static Usz arp15[] = {2, 3, 1, 0};       // diverge down with rest
-static Usz arp16[] = {1, 2, 3, 2, 0};    // up bounce triangle with rest
-static Usz arp17[] = {3, 2, 1, 2, 0};    // down bounce triangle with rest
-static Usz arp18[] = {1, 0, 2, 3, 0};    // riff
-static Usz arp19[] = {1, 0, 3, 2, 0};    // riff
-static Usz arp20[] = {1, 2, 0, 3, 0};    // riff
-static Usz arp21[] = {1, 3, 0, 2, 0};    // riff
-static Usz arp22[] = {1, 2, 0, 1, 3};    // riff
-static Usz arp23[] = {1, 3, 0, 1, 2};    // riff
-static Usz arp24[] = {1, 2, 0, 1, 3, 0}; // riff
-static Usz arp25[] = {1, 0, 2, 1, 0, 3}; // riff
-static Usz arp26[] = {1, 0, 3, 1, 0, 2}; // riff
+// Define the arpeggiator pattern types
+typedef enum {
+  ARP_UP = 0,        // Ascending
+  ARP_DOWN,          // Descending
+  ARP_UP_DOWN,       // Up and down (without repeating highest)
+  ARP_DOWN_UP,       // Down and up (without repeating lowest)
+  ARP_UP_DOWN_PLUS,  // Up and down with repeated end points
+  ARP_DOWN_UP_PLUS,  // Down and up with repeated end points
+  ARP_CONVERGE,      // Outside in (highest, lowest, 2nd highest, 2nd lowest...)
+  ARP_DIVERGE,       // Inside out (middle outward)
+  ARP_CON_DIVERGE,   // Converge followed by diverge
+  ARP_PINKY_UP,      // Alternate between notes and highest note
+  ARP_PINKY_UP_DOWN, // Pinky UpDown
+  ARP_THUMB_UP,      // Alternate between lowest and other notes
+  ARP_THUMB_UP_DOWN, // Thumb UpDown
+  ARP_RANDOM,        // Random selection
+  ARP_PATTERN_COUNT
+} ArpPatternType;
 
-// Arpeggio pattern pointers
-static Usz *arpPatterns[] = {arp00, arp01, arp02, arp03, arp04, arp05, arp06,
-                             arp07, arp08, arp09, arp10, arp11, arp12, arp13,
-                             arp14, arp15, arp16, arp17, arp18, arp19, arp20,
-                             arp21, arp22, arp23, arp24, arp25, arp26};
+// Define the MAX_SCALE_LENGTH constant for pattern arrays
+#define MAX_SCALE_LENGTH 18
 
-// Lengths of each arpeggio pattern
-static size_t arpPatternLengths[] = {
-    sizeof(arp00) / sizeof(arp00[0]), sizeof(arp01) / sizeof(arp01[0]),
-    sizeof(arp02) / sizeof(arp02[0]), sizeof(arp03) / sizeof(arp03[0]),
-    sizeof(arp04) / sizeof(arp04[0]), sizeof(arp05) / sizeof(arp05[0]),
-    sizeof(arp06) / sizeof(arp06[0]), sizeof(arp07) / sizeof(arp07[0]),
-    sizeof(arp08) / sizeof(arp08[0]), sizeof(arp09) / sizeof(arp09[0]),
-    sizeof(arp10) / sizeof(arp10[0]), sizeof(arp11) / sizeof(arp11[0]),
-    sizeof(arp12) / sizeof(arp12[0]), sizeof(arp13) / sizeof(arp13[0]),
-    sizeof(arp14) / sizeof(arp14[0]), sizeof(arp15) / sizeof(arp15[0]),
-    sizeof(arp16) / sizeof(arp16[0]), sizeof(arp17) / sizeof(arp17[0]),
-    sizeof(arp18) / sizeof(arp18[0]), sizeof(arp19) / sizeof(arp19[0]),
-    sizeof(arp20) / sizeof(arp20[0]), sizeof(arp21) / sizeof(arp21[0]),
-    sizeof(arp22) / sizeof(arp22[0]), sizeof(arp23) / sizeof(arp23[0]),
-    sizeof(arp24) / sizeof(arp24[0]), sizeof(arp25) / sizeof(arp25[0]),
-    sizeof(arp26) / sizeof(arp26[0])};
+// Function to get the scale degree based on pattern type and step
+static Usz get_pattern_degree(ArpPatternType pattern, Usz step, Usz scale_length, 
+                             Oper_extra_params *extra_params, Usz tick_number) {
+  if (scale_length == 0)
+    return 0;
+
+  switch (pattern) {
+  case ARP_UP:
+    return step % scale_length;
+
+  case ARP_DOWN:
+    return (scale_length - 1) - (step % scale_length);
+
+  case ARP_UP_DOWN: {
+    Usz period = (scale_length * 2) - 2;
+    if (period < 2)
+      period = 2;
+    Usz pos = step % period;
+    return pos < scale_length ? pos : period - pos;
+  }
+
+  case ARP_DOWN_UP: {
+    Usz period = (scale_length * 2) - 2;
+    if (period < 2)
+      period = 2;
+    Usz pos = step % period;
+    return pos < scale_length ? (scale_length - 1) - pos
+                              : pos - scale_length + 1;
+  }
+
+  case ARP_UP_DOWN_PLUS: {
+    // Up and down with end notes played twice
+    Usz period = scale_length * 2;
+    Usz pos = step % period;
+    if (pos < scale_length) {
+      return pos; // Ascending phase
+    } else {
+      return period - pos - 1; // Descending phase
+    }
+  }
+
+  case ARP_DOWN_UP_PLUS: {
+    // Down and up with end notes played twice
+    Usz period = scale_length * 2;
+    Usz pos = step % period;
+    if (pos < scale_length) {
+      return scale_length - pos - 1; // Descending phase
+    } else {
+      return pos - scale_length; // Ascending phase
+    }
+  }
+
+  case ARP_CONVERGE: {
+    // Outside in (highest, lowest, 2nd highest, 2nd lowest...)
+    Usz period = scale_length;
+    Usz pos = step % period;
+    Usz order[MAX_SCALE_LENGTH];
+
+    // Build the converge pattern
+    Usz left = 0, right = scale_length - 1;
+    for (Usz i = 0; i < scale_length; i++) {
+      if (i % 2 == 0) {
+        order[i] = right--;
+      } else {
+        order[i] = left++;
+      }
+    }
+
+    return order[pos];
+  }
+
+  case ARP_DIVERGE: {
+    // Inside out (middle outward)
+    Usz period = scale_length;
+    Usz pos = step % period;
+    Usz order[MAX_SCALE_LENGTH];
+
+    // Build the diverge pattern
+    Usz midL = (scale_length - 1) / 2;
+    Usz midR = scale_length / 2;
+    Usz idx = 0;
+    Usz offset = 0;
+
+    while (idx < scale_length) {
+      if (midR + offset < scale_length) {
+        order[idx++] = midR + offset;
+      }
+      if (idx < scale_length && midL - offset >= 0) {
+        order[idx++] = midL - offset;
+      }
+      offset++;
+    }
+
+    return order[pos];
+  }
+
+  case ARP_CON_DIVERGE: {
+    // Converge followed by diverge
+    Usz con_len = scale_length;
+    Usz div_len = scale_length > 2
+                      ? scale_length - 2
+                      : 0; // Remove first and last for diverge part
+    Usz full_period = con_len + div_len;
+
+    if (full_period == 0)
+      return 0;
+
+    Usz pos = step % full_period;
+
+    if (pos < con_len) {
+      // Converge part (same as ARP_CONVERGE)
+      Usz order[MAX_SCALE_LENGTH];
+      Usz left = 0, right = scale_length - 1;
+      for (Usz i = 0; i < scale_length; i++) {
+        if (i % 2 == 0) {
+          order[i] = right--;
+        } else {
+          order[i] = left++;
+        }
+      }
+      return order[pos];
+    } else {
+      // Diverge part (same as ARP_DIVERGE but skip first and last notes)
+      pos = pos - con_len;
+      Usz order[MAX_SCALE_LENGTH];
+      Usz midL = (scale_length - 1) / 2;
+      Usz midR = scale_length / 2;
+      Usz idx = 0;
+      Usz offset = 0;
+
+      while (idx < div_len) {
+        if (midR + offset < scale_length - 1 && midR + offset > 0) {
+          order[idx++] = midR + offset;
+        }
+        if (idx < div_len && midL - offset > 0 &&
+            midL - offset < scale_length - 1) {
+          order[idx++] = midL - offset;
+        }
+        offset++;
+      }
+
+      return order[pos % div_len];
+    }
+  }
+
+  case ARP_PINKY_UP: {
+    // Alternate between notes and highest note
+    if (scale_length <= 1)
+      return 0;
+
+    Usz highest = scale_length - 1;
+    Usz pos = step % (scale_length * 2 - 2);
+
+    if (pos % 2 == 0) {
+      return pos / 2;
+    } else {
+      return highest;
+    }
+  }
+
+  case ARP_PINKY_UP_DOWN: {
+    // Alternate up and down with highest note
+    if (scale_length <= 1)
+      return 0;
+
+    Usz highest = scale_length - 1;
+    Usz up_section = (scale_length - 1) * 2;
+    Usz down_section = (scale_length - 2) * 2;
+    Usz full_period = up_section + down_section;
+
+    if (full_period == 0)
+      return 0;
+
+    Usz pos = step % full_period;
+
+    if (pos < up_section) {
+      // Up section: alternate with highest
+      if (pos % 2 == 0) {
+        return pos / 2;
+      } else {
+        return highest;
+      }
+    } else {
+      // Down section: alternate with highest
+      pos = pos - up_section;
+      if (pos % 2 == 0) {
+        return highest - 1 - (pos / 2);
+      } else {
+        return highest;
+      }
+    }
+  }
+
+  case ARP_THUMB_UP: {
+    // Alternate between lowest and other notes
+    if (scale_length <= 1)
+      return 0;
+
+    Usz lowest = 0;
+    Usz pos = step % ((scale_length - 1) * 2);
+
+    if (pos % 2 == 0) {
+      return lowest;
+    } else {
+      return (pos / 2) + 1;
+    }
+  }
+
+  case ARP_THUMB_UP_DOWN: {
+    // Alternate up and down with lowest note
+    if (scale_length <= 1)
+      return 0;
+
+    Usz lowest = 0;
+    Usz up_section = (scale_length - 1) * 2;
+    Usz down_section = (scale_length - 2) * 2;
+    Usz full_period = up_section + down_section;
+
+    if (full_period == 0)
+      return 0;
+
+    Usz pos = step % full_period;
+
+    if (pos < up_section) {
+      // Up section
+      if (pos % 2 == 0) {
+        return lowest;
+      } else {
+        return (pos / 2) + 1;
+      }
+    } else {
+      // Down section
+      pos = pos - up_section;
+      if (pos % 2 == 0) {
+        return lowest;
+      } else {
+        return scale_length - 1 - (pos / 2);
+      }
+    }
+  }
+
+  case ARP_RANDOM: {
+    // Use deterministic random based on step and random_seed
+    Usz key = (extra_params->random_seed + step) ^ (tick_number << 16);
+    key = (key ^ 61) ^ (key >> 16);
+    key = key + (key << 3);
+    key = key ^ (key >> 4);
+    key = key * 0x27d4eb2d;
+    key = key ^ (key >> 15);
+    return key % scale_length;
+  }
+
+  default:
+    return 0;
+  }
+}
 
 BEGIN_OPERATOR(midiarpeggiator)
-  // Define input ports for pattern index, current note position, octave range and direction, and MIDI parameters
-  PORT(0, -3, IN | PARAM); // Arpeggio Pattern Index
-  PORT(0, -2,
-       IN |
-           PARAM); // Note to play (based on selected arpeggio pattern's offset)
-  PORT(0, -1, IN | PARAM); // Octave range and direction
+  // Pattern, Step, Range inputs
+  PORT(0, -3, IN | PARAM); // Pattern Type (0-13)
+  PORT(0, -2, IN | PARAM); // Current Step
+  PORT(0, -1, IN | PARAM); // Octave Range (1-4)
 
-  // Additional inputs for MIDI event
+  // MIDI parameters
   PORT(0, 1, IN); // Channel
   PORT(0, 2, IN); // Base Octave
-  PORT(0, 3, IN); // Note 1
-  PORT(0, 4, IN); // Note 2
-  PORT(0, 5, IN); // Note 3
-  PORT(0, 6, IN); // Velocity
-  PORT(0, 7, IN); // Length
+  PORT(0, 3, IN); // Root note
+  PORT(0, 4, IN); // Scale type (0-h)
+  PORT(0, 5, IN); // Velocity
+  PORT(0, 6, IN); // Length
 
-  PORT(0, 0, OUT); // Mark output immediately
+  PORT(0, 0, OUT); // Mark output
 
   STOP_IF_NOT_BANGED;
 
-  Usz arp_pattern_index = index_of(PEEK(0, -3));
-  Usz current_position = index_of(PEEK(0, -2));
-  Glyph octave_range_glyph = PEEK(0, -1);
-  Usz octave_range_index = index_of(octave_range_glyph);
+  // Get pattern parameters
+  Usz pattern_type = index_of(PEEK(0, -3)) % ARP_PATTERN_COUNT;
+  Usz current_step = index_of(PEEK(0, -2));
+  Usz octave_range = index_of(PEEK(0, -1));
+  if (octave_range == 0)
+    octave_range = 1;
+  if (octave_range > 4)
+    octave_range = 4;
 
-  // Determine octave span and direction
-  bool direction_down = false;
-  bool mono = false;
-  Usz octave_span = 1;
+  // Get MIDI parameters
+  Usz channel = index_of(PEEK(0, 1));
+  if (channel > 15)
+    channel = 15;
 
-  // Parse octave range parameter
-  if (octave_range_index >= 1 && octave_range_index <= 4) {
-    // 1-4: Ascending monophonic
-    direction_down = false;
-    octave_span = octave_range_index;
-    mono = true;
-  } else if (octave_range_index >= 5 && octave_range_index <= 8) {
-    // 5-8: Ascending polyphonic
-    direction_down = false;
-    octave_span = octave_range_index - 4;
-    mono = false;
-  } else if (octave_range_index >= 10 && octave_range_index <= 13) {
-    // a-d: Descending monophonic
-    direction_down = true;
-    octave_span = octave_range_index - 9;
-    mono = true;
-  } else if (octave_range_index >= 14 && octave_range_index <= 17) {
-    // e-h: Descending polyphonic
-    direction_down = true;
-    octave_span = octave_range_index - 13;
-    mono = false;
-  } else {
-    // All other values (0, 9, i+): No output
-    return;
-  }
-
-  // Get pattern length and current octave
-  size_t pattern_length =
-      arpPatternLengths[arp_pattern_index % (sizeof(arpPatternLengths) /
-                                             sizeof(arpPatternLengths[0]))];
-
-  // Calculate current note in pattern and adjust octave if necessary
   Usz base_octave = index_of(PEEK(0, 2));
-  Usz current_octave = base_octave;
-  Usz note_in_pattern_index;
-  if (!direction_down) {
-    current_octave += (current_position / pattern_length) % octave_span;
-    note_in_pattern_index = current_position % pattern_length;
-  } else {
-    current_octave +=
-        octave_span - 1 - ((current_position / pattern_length) % octave_span);
-    note_in_pattern_index =
-        pattern_length - 1 - (current_position % pattern_length);
-  }
+  if (base_octave > 9)
+    base_octave = 9;
 
-  // Ensure current_octave is within MIDI limits
-  if (current_octave > 9)
-    current_octave = 9;
+  // Get root note and scale
+  Glyph root_note_glyph = PEEK(0, 3);
+  U8 root_note_num = midi_note_number_of(root_note_glyph);
+  if (root_note_num == UINT8_MAX)
+    return;
 
-  // Select the note to play from the pattern
-  Usz *current_pattern =
-      arpPatterns[arp_pattern_index %
-                  (sizeof(arpPatterns) / sizeof(arpPatterns[0]))];
-  Usz note_to_play_index =
-      current_pattern[note_in_pattern_index] - 1; // Adjusted for 0-based index
+  Usz scale_index = index_of(PEEK(0, 4));
+  if (scale_index >= sizeof(scales) / sizeof(scales[0]))
+    return;
 
-  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-  U8 note_num = midi_note_number_of(note_gs[note_to_play_index]);
-  if (note_num == UINT8_MAX)
-    return; // Skip if invalid note
+  // Get scale length and scale intervals
+  Usz scale_length = scale_lengths[scale_index];
+  Usz *scale = scales[scale_index];
 
-  // Channel, velocity, and length
-  U8 channel = (U8)index_of(PEEK(0, 1));
+  // Calculate octave offset
+  Usz octave_offset = (current_step / scale_length) % octave_range;
+
+  // Get the scale degree based on pattern type and step
+  Usz degree = get_pattern_degree((ArpPatternType)pattern_type, current_step,
+                                  scale_length, extra_params, Tick_number);
+
+  // Calculate semitone offset from scale
+  Usz semitone_offset = scale[degree];
+
+  // Calculate total semitones and resulting octave/note
+  Usz total_semitones = root_note_num + semitone_offset;
+  Usz final_note = total_semitones % 12;
+  Usz octave_increment = total_semitones / 12;
+  Usz final_octave = base_octave + octave_offset + octave_increment;
+
+  // Ensure octave is in valid range
+  if (final_octave > 9)
+    return;
+
+  // Get velocity and duration
+  Glyph velocity_g = PEEK(0, 5);
+  Glyph length_g = PEEK(0, 6);
+
   U8 velocity =
-      (PEEK(0, 6) == '.' ? 127 : (U8)(index_of(PEEK(0, 6)) * 127 / 35));
-
-  // if (velocity == 0)
-  //   return;
-
+      (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
   if (velocity > 127)
     velocity = 127;
 
-  Glyph length_g = PEEK(0, 7);
-
-  // Before sending the MIDI note, check if the note to play is a rest (0)
-  if (note_to_play_index == (Usz)-1) { // If it's a rest
-    PORT(0, 0, OUT); // Optionally mark output or maintain visual indication
-    return;          // Skip this iteration, ensuring a rest
-  }
-
-  // Use previously declared variables without re-declaration
-  note_num = midi_note_number_of(note_gs[note_to_play_index]);
-  if (note_num == UINT8_MAX)
-    return; // Skip if invalid note
-
-  // Normal note playing logic using already declared variables
-  // Note: No need to re-declare 'channel', 'velocity', and 'length' here
-
-  // Send MIDI note event
+  // Create and send MIDI note event
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_note;
-  oe->channel = channel;
-  oe->octave = (U8)current_octave;
-  oe->note = note_num;
+  oe->channel = (U8)channel;
+  oe->octave = (U8)final_octave;
+  oe->note = (U8)final_note;
   oe->velocity = velocity;
   oe->duration = (U8)(index_of(length_g) & 0x7Fu);
-  oe->mono = mono ? 1 : 0; // Set mono flag based on octave range
-
+  oe->mono = 1; // Use monophonic mode
 END_OPERATOR
 
 // BOORCH's new Random Unique

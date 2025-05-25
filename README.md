@@ -134,7 +134,7 @@ Requires bang. Similar to the Random Operator, but designed to avoid producing i
 
 
 ## MIDI Arpeggiator Operator (`&`):
-The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequences from a set of input notes across specified octave ranges. It supports dynamic direction control, allowing sequences to ascend, descend, or both based on the input parameters. It only sends MIDI when it's "banged". This bears the possibility of coming up with quite unique patterns since it decouples when a note is "selected" and when a note is "played".
+The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequences from a single root note and scale across specified octave ranges. It supports dynamic pattern control, allowing for various melodic sequences. It only sends MIDI when it's "banged". This bears the possibility of coming up with quite unique patterns since it decouples when a note is "selected" and when a note is "played".
 
 | Parameter     | Description                                               |
 |---------------|-----------------------------------------------------------|
@@ -144,26 +144,30 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 | Operator      | "&"                                                       |
 | Channel       | MIDI channel for output.                                  |
 | Base Octave   | Starting octave for the first note in the pattern.        |
-| Note 1        | First note in the arpeggio sequence.                      |
-| Note 2        | Second note in the arpeggio sequence.                     |
-| Note 3        | Third note in the arpeggio sequence.                      |
+| Root Note     | The root note that defines the key of the arpeggio.       |
+| Scale Type    | Scale type index (0-h) to determine note intervals.       |
 | Velocity      | MIDI velocity of the played notes.                        |
 | Duration      | Length of each note in the sequence.                      |
 
 ### Inputs
 
-| Arp Pattern | Note to Play | Octave Range | Operator | Channel | Base Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
-|:-----------:|:------------:|:------------:|:--------:|:-------:|:-----------:|:------:|:------:|:------:|:--------:|:--------:|
-|      P      |       N      |       R      |    &     |    C    |      O      |   N1   |   N2   |   N3   |    V     |    D     |
+| Arp Pattern | Note to Play | Octave Range | Operator | Channel | Base Octave | Root Note | Scale Type | Velocity | Duration |
+|:-----------:|:------------:|:------------:|:--------:|:-------:|:-----------:|:---------:|:----------:|:--------:|:--------:|
+|      P      |       N      |       R      |    &     |    C    |      O      |     R     |     S      |    V     |    D     |
 
-- `P`: Arpeggio Pattern Index (0-9 for predefined patterns)
+- `P`: Arpeggio Pattern Index (0-13 for predefined patterns)
 - `N`: Note to play (based on selected arpeggio pattern's offset)
-- `R`: Octave range and direction (1-2-3-4 for ascending monophonic, 5-6-7-8 for ascending polyphonic, a-b-c-d for descending monophonic, e-f-g-h for descending polyphonic)
-- `C`, `O`, `N1`, `N2`, `N3`, `V`, `D`: Similar to the Midipoly operator
+- `R`: Octave range (1-4, higher values for wider octave range)
+- `C`: MIDI channel (0-F)
+- `O`: Base octave for the root note
+- `R`: Root note (like C, c, D, etc.)
+- `S`: Scale type (0-h matching the Scale Operator scale options)
+- `V`: Velocity
+- `D`: Duration
 
 ### Example
 
-- `02a&04CEGf3`: This example uses arpeggio pattern `2`, plays the first note in the pattern, spans across 1 octave in a descending direction, on channel `0`, starting from octave `4`, with the notes `C`, `E`, `G`, velocity `f`, and duration `3`.
+- `02a&04C0f3`: This example uses arpeggio pattern `2`, plays the first note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, chromatic scale `0`, velocity `f`, and duration `3`.
 
 This operator generates a MIDI arpeggiated sequence based on the input parameters, allowing for intricate rhythmic patterns to be easily created and manipulated live. Adjust the `Arp Pattern`, `Note to Play`, and `Octave Range` to explore different musical ideas.
 
@@ -173,38 +177,22 @@ Each pattern is defined by a sequence of steps that dictate the order of arpeggi
 
 To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeggiator operator (`&`). The `Note to Play` input determines which step in the selected pattern to play, allowing the sequence to progress. Suggestions: Connect `Note to Play` to a Clock operator, or a Track operator, or a Random Unique operator for complex and/or unexpected patterns.
 
-| Pattern Index | Notes Sequence       | Description               |
-|---------------|----------------------|---------------------------|
-| 0             | 1, 2, 3              | Up                        |
-| 1             | 3, 2, 1              | Down                      |
-| 2             | 1, 3, 2              | Converge up               |
-| 3             | 3, 1, 2              | Converge down             |
-| 4             | 2, 1, 3              | Diverge up                |
-| 5             | 2, 3, 1              | Diverge down              |
-| 6             | 1, 2, 3, 2           | Up bounce triangle        |
-| 7             | 3, 2, 1, 2           | Down bounce triangle      |
-| 8             | 1, 2, 3, 3, 2, 1     | Up bounce sine            |
-| 9             | 3, 2, 1, 1, 2, 3     | Down bounce sine          |
-| a             | 1, 2, 3, 0           | Up with rest              |
-| b             | 3, 2, 1, 0           | Down with rest            |
-| c             | 1, 3, 2, 0           | Converge up with rest     |
-| d             | 3, 1, 2, 0           | Converge down with rest   |
-| e             | 2, 1, 3, 0           | Diverge up with rest      |
-| f             | 2, 3, 1, 0           | Diverge down with rest    |
-| g             | 1, 2, 3, 2, 0        | Up bounce triangle with rest |
-| h             | 3, 2, 1, 2, 0        | Down bounce triangle with rest |
-| i             | 1, 0, 2, 3, 0        | Riff with rests           |
-| j             | 1, 0, 3, 2, 0        | Alternate riff with rests |
-| k             | 1, 2, 0, 3, 0        | Riff variation with rests |
-| l             | 1, 3, 0, 2, 0        | Another riff variation with rests |
-| m             | 1, 2, 0, 1, 3        | Riff with internal rest   |
-| n             | 1, 3, 0, 1, 2        | Riff alternate with internal rest |
-| o             | 1, 2, 0, 1, 3, 0     | Extended riff with rests  |
-| p             | 1, 0, 2, 1, 0, 3     | Complex riff with rests   |
-| q             | 1, 0, 3, 1, 0, 2     | Complex alternate riff with rests |
-
-
-*IMPORTANT: Arp patterns `0` to `9` are most likely to be permanent. You can come up with complex sequences using only them and banging the operator in various timings. But the patterns `a` and above are just some experimental combinations and they're likely to change in future updates.
+| Pattern Index | Description         | Pattern Style                      |
+|---------------|---------------------|-----------------------------------|
+| 0             | Up                  | Ascending notes in scale          |
+| 1             | Down                | Descending notes in scale         |
+| 2             | Up-Down             | Ascending then descending (no repeat at turn points) |
+| 3             | Down-Up             | Descending then ascending (no repeat at turn points) |
+| 4             | Up-Down+            | Ascending then descending (with repeated turn points) |
+| 5             | Down-Up+            | Descending then ascending (with repeated turn points) |
+| 6             | Converge            | Outside in (highest, lowest, 2nd highest, 2nd lowest...) |
+| 7             | Diverge             | Inside out (middle notes outward) |
+| 8             | Converge-Diverge    | Converge pattern followed by diverge pattern |
+| 9             | Pinky Up            | Alternate between notes and highest note |
+| 10            | Pinky Up-Down       | Alternate up and down with highest note |
+| 11            | Thumb Up            | Alternate between lowest and other notes |
+| 12            | Thumb Up-Down       | Alternate up and down with lowest note |
+| 13            | Random              | Random selection from scale degrees |
 
 
 ## Bouncer (`;`) (A rudimentary LFO interpretation)

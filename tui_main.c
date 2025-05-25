@@ -115,7 +115,7 @@ static attr_t term_attrs_of_cell(Glyph g, Mark m) {
     attr = A_bold | fg_bg(C_red, C_natural);
     break;
   case Glyph_class_grid:
-    attr = A_bold | fg_bg(C_black, C_natural);
+    attr = A_dim | fg_bg(C_blue, C_natural);
     break;
   case Glyph_class_comment:
     attr = A_dim | Cdef_normal;
