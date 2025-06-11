@@ -993,6 +993,26 @@ static Usz scale_iwato[] = {0, 1, 5, 6, 10};               // 7: Iwato
 static Usz scale_tetratonic[] = {0, 4, 7, 11};             // 8: Tetratonic
 static Usz scale_fifths[] = {0, 7};                        // 9: Fifths
 
+// ENRICHED CHORDS FOR MIDICHORD 0-9 (Approach 2: Enriched versions of a-j)
+static Usz chord_major_rich[] = {0, 4, 7, 12};             // 0: Major + octave root (C-E-G-C)
+static Usz chord_minor_rich[] = {0, 3, 7, 12};             // 1: Minor + octave root (C-Eb-G-C)
+static Usz chord_sus4_rich[] = {0, 5, 7, 12};              // 2: Sus4 + octave root (C-F-G-C)
+static Usz chord_sus2_rich[] = {0, 2, 7, 12};              // 3: Sus2 + octave root (C-D-G-C)
+static Usz chord_major7_rich[] = {0, 4, 7, 11, 16};        // 4: Major7 + octave 3rd (C-E-G-B-E)
+static Usz chord_minor7_rich[] = {0, 3, 7, 10, 15};        // 5: Minor7 + octave 3rd (C-Eb-G-Bb-Eb)
+static Usz chord_dom7_rich[] = {0, 4, 7, 10, 19};          // 6: Dom7 + octave 5th (C-E-G-Bb-G)
+static Usz chord_major6_rich[] = {0, 4, 7, 9, 12};         // 7: Major6 + octave root (C-E-G-A-C)
+static Usz chord_minor6_rich[] = {0, 3, 7, 9, 12};         // 8: Minor6 + octave root (C-Eb-G-A-C)
+static Usz chord_dim_rich[] = {0, 3, 6, 12};               // 9: Dim + octave root (C-Eb-Gb-C)
+
+// Separate scale arrays for Scale operator (0-9)
+static Usz *scales[] = {
+    scale_major, scale_minor, scale_dorian, scale_lydian, scale_mixolydian,
+    scale_pentatonic, scale_hirajoshi, scale_iwato, scale_tetratonic, scale_fifths
+};
+
+static Usz scale_lengths[] = {7, 7, 7, 7, 7, 5, 5, 5, 4, 2};
+
 // CHORDS ROOT POSITION (a-z) - 26 most common chords
 static Usz chord_major[] = {0, 4, 7};                      // a: Major
 static Usz chord_minor[] = {0, 3, 7};                      // b: Minor
@@ -1051,9 +1071,9 @@ static Usz chord_min7b5_inv[] = {0, 3, 7, 9};              // Z: Minor 7b5 1st i
 
 // Unified array of all scales and chords (0-9, a-z, A-Z)
 static Usz *scales_and_chords[] = {
-    // Scales (0-9)
-    scale_major, scale_minor, scale_dorian, scale_lydian, scale_mixolydian,
-    scale_pentatonic, scale_hirajoshi, scale_iwato, scale_tetratonic, scale_fifths,
+    // Enriched chords for Midichord (0-9)
+    chord_major_rich, chord_minor_rich, chord_sus4_rich, chord_sus2_rich, chord_major7_rich,
+    chord_minor7_rich, chord_dom7_rich, chord_major6_rich, chord_minor6_rich, chord_dim_rich,
     // Chords root position (a-z)
     chord_major, chord_minor, chord_sus4, chord_sus2, chord_major7, chord_minor7,
     chord_dom7, chord_min_maj7, chord_minor6, chord_major6, chord_major9, chord_minor9,
@@ -1071,8 +1091,8 @@ static Usz *scales_and_chords[] = {
 
 // Lengths for scales and chords
 static Usz scale_chord_lengths[] = {
-    // Scales (0-9)
-    7, 7, 7, 7, 7, 5, 5, 5, 4, 2,
+    // Enriched chords for Midichord (0-9)
+    4, 4, 4, 4, 5, 5, 5, 5, 5, 4,
     // Chords root position (a-z) 
     3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 4, 4, 3, 4, 4, 3, 4, 5, 5, 5, 5, 5, 5, 4,
     // Chords first inversion (A-Z)
@@ -1121,37 +1141,69 @@ BEGIN_OPERATOR(scale)
   Usz scale_index = index_of(scale_glyph);
   Usz degree_index = index_of(degree_glyph);
 
-  // Validate scale/chord index
-  Usz num_scales_chords = sizeof(scales_and_chords) / sizeof(scales_and_chords[0]);
-  if (scale_index >= num_scales_chords)
-    return;
+  Usz scale_length, scale_offset;
+  
+  if (scale_index <= 9) {
+    // Use scales for 0-9
+    if (scale_index >= sizeof(scales) / sizeof(scales[0]))
+      return;
+    scale_length = scale_lengths[scale_index];
+    Usz octave_increment = degree_index / scale_length;
+    degree_index = degree_index % scale_length;
+    scale_offset = scales[scale_index][degree_index];
+    
+    // Calculate total semitones including octave increment
+    Usz total_semitones = root_note_num + scale_offset + (octave_increment * 12);
 
-  // Get scale/chord length and calculate octave increment
-  Usz scale_length = scale_chord_lengths[scale_index];
-  Usz octave_increment = degree_index / scale_length;
+    // Calculate final note and octave
+    Usz final_note = total_semitones % 12;
+    Usz octave_offset = total_semitones / 12;
+    Usz final_octave = base_octave + octave_offset;
 
-  // Calculate scale degree within current octave
-  degree_index = degree_index % scale_length;
-  Usz scale_offset = scales_and_chords[scale_index][degree_index];
+    if (final_octave > 9)
+      return;
 
-  // Calculate total semitones
-  Usz total_semitones = root_note_num + scale_offset;
+    // Output note
+    Glyph output_note_glyph = note_sequence[final_note];
+    POKE(1, 0, output_note_glyph);
 
-  // Calculate final note and octave
-  Usz final_note = total_semitones % 12;
-  Usz octave_offset = total_semitones / 12;
-  Usz final_octave = base_octave + octave_increment + octave_offset;
+    // Output octave if input octave was provided
+    if (octave_g != '.') {
+      POKE(1, -1, glyph_of(final_octave));
+    }
+  } else {
+    // Use unified array for a-z, A-Z (indices 10-61)
+    Usz num_scales_chords = sizeof(scales_and_chords) / sizeof(scales_and_chords[0]);
+    if (scale_index >= num_scales_chords)
+      return;
 
-  if (final_octave > 9)
-    return;
+    // Get scale/chord length and calculate octave increment
+    scale_length = scale_chord_lengths[scale_index];
+    Usz octave_increment = degree_index / scale_length;
 
-  // Output note
-  Glyph output_note_glyph = note_sequence[final_note];
-  POKE(1, 0, output_note_glyph);
+    // Calculate scale degree within current octave
+    degree_index = degree_index % scale_length;
+    scale_offset = scales_and_chords[scale_index][degree_index];
 
-  // Output octave if input octave was provided
-  if (octave_g != '.') {
-    POKE(1, -1, glyph_of(final_octave));
+    // Calculate total semitones
+    Usz total_semitones = root_note_num + scale_offset + (octave_increment * 12);
+
+    // Calculate final note and octave
+    Usz final_note = total_semitones % 12;
+    Usz octave_offset = total_semitones / 12;
+    Usz final_octave = base_octave + octave_offset;
+
+    if (final_octave > 9)
+      return;
+
+    // Output note
+    Glyph output_note_glyph = note_sequence[final_note];
+    POKE(1, 0, output_note_glyph);
+
+    // Output octave if input octave was provided
+    if (octave_g != '.') {
+      POKE(1, -1, glyph_of(final_octave));
+    }
   }
 END_OPERATOR
 
@@ -1169,9 +1221,12 @@ BEGIN_OPERATOR(midichord)
   Usz chord_idx = index_of(chord_glyph);
   
   // Map chord input to unified scales_and_chords array
+  // 0-9: enriched chords for Midichord
   // a-z (lowercase): indices 10-35 (root position chords)
   // A-Z (uppercase): indices 36-61 (first inversion chords)
-  if (chord_idx >= 10 && chord_idx <= 35) {
+  if (chord_idx <= 9) {
+    // 0-9: enriched chords (use as-is, already correct index)
+  } else if (chord_idx >= 10 && chord_idx <= 35) {
     // Lowercase a-z: use as-is (already correct index for scales_and_chords)
   } else if (chord_idx >= 36 && chord_idx <= 61) {
     // Uppercase A-Z: use as-is (already correct index for scales_and_chords)

@@ -100,18 +100,36 @@ Example 3:
 - Plays C3 C4 C5
 
 ## Midichord Operator (`=`)
-The Midichord operator outputs MIDI notes to form chord types using the same unified system as the Scale operator. It supports chord root positions (a-z) and first inversions (A-Z), making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
+The Midichord operator outputs MIDI notes to form chord types using the unified system. It supports enriched chords (0-9), chord root positions (a-z) and first inversions (A-Z), making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
 
 | Operator | Channel | Octave | Root Note | Chord Type | Velocity | Duration |
 |:--------:|:-------:|:------:|:---------:|:----------:|:--------:|:--------:|
 |    =     |    C    |   O    |     R     |     T      |    V     |    D     |
 
 ### Examples
+- `=13C0ff` - Plays enriched C major chord (C-E-G-C) on channel 1, octave 3
+- `=13C1ff` - Plays enriched C minor chord (C-Eb-G-C) on channel 1, octave 3
 - `=13Caff` - Plays C major chord (C-E-G) on channel 1, octave 3
 - `=13CAff` - Plays C major first inversion (E-G-C) on channel 1, octave 3  
 - `=13Cbff` - Plays C minor chord (C-Eb-G) on channel 1, octave 3
 
 ### Available Chord Types
+
+#### Enriched Chords (0-9) - Enhanced versions with strategic octave additions
+| Index | Name | Intervals | Notes (C root) |
+|:-----:|:----:|:---------:|:--------------:|
+| 0 | Major + Oct | 0,4,7,12 | C-E-G-C |
+| 1 | Minor + Oct | 0,3,7,12 | C-Eb-G-C |
+| 2 | Sus4 + Oct | 0,5,7,12 | C-F-G-C |
+| 3 | Sus2 + Oct | 0,2,7,12 | C-D-G-C |
+| 4 | Major7 + Oct3rd | 0,4,7,11,16 | C-E-G-B-E |
+| 5 | Minor7 + Oct3rd | 0,3,7,10,15 | C-Eb-G-Bb-Eb |
+| 6 | Dom7 + Oct5th | 0,4,7,10,19 | C-E-G-Bb-G |
+| 7 | Major6 + Oct | 0,4,7,9,12 | C-E-G-A-C |
+| 8 | Minor6 + Oct | 0,3,7,9,12 | C-Eb-G-A-C |
+| 9 | Dim + Oct | 0,3,6,12 | C-Eb-Gb-C |
+
+#### Root Position Chords (a-z) & First Inversions (A-Z)
 The Midichord operator uses the same chord definitions as the Scale operator (a-z for root positions, A-Z for first inversions). See the Scale Operator section above for the complete chord reference table.
 
 ## Random Operators (`R` and `r`):
