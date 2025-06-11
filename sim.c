@@ -177,7 +177,7 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('?', midipb)                                                               \
   _('^', scale)                                                                \
   _('|', midipoly)                                                             \
-  _('&', midiarpeggiator)
+  _('&', arpeggiator)
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \
@@ -1370,375 +1370,196 @@ BEGIN_OPERATOR(midipoly)
 
 END_OPERATOR
 
-// BOORCH's new MidiArpeggiator
-// Define the arpeggiator pattern types
+// BOORCH's Simple Arpeggiator - outputs degree numbers for Scale operator
 typedef enum {
-  ARP_UP = 0,        // Ascending
-  ARP_DOWN,          // Descending
-  ARP_UP_DOWN,       // Up and down (without repeating highest)
-  ARP_DOWN_UP,       // Down and up (without repeating lowest)
-  ARP_UP_DOWN_PLUS,  // Up and down with repeated end points
-  ARP_DOWN_UP_PLUS,  // Down and up with repeated end points
-  ARP_CONVERGE,      // Outside in (highest, lowest, 2nd highest, 2nd lowest...)
-  ARP_DIVERGE,       // Inside out (middle outward)
-  ARP_CON_DIVERGE,   // Converge followed by diverge
-  ARP_PINKY_UP,      // Alternate between notes and highest note
-  ARP_PINKY_UP_DOWN, // Pinky UpDown
-  ARP_THUMB_UP,      // Alternate between lowest and other notes
-  ARP_THUMB_UP_DOWN, // Thumb UpDown
-  ARP_RANDOM,        // Random selection
+  ARP_UP = 0,        // 0: Ascending
+  ARP_DOWN,          // 1: Descending  
+  ARP_UP_DOWN,       // 2: Up and down (without repeating highest)
+  ARP_DOWN_UP,       // 3: Down and up (without repeating lowest)
+  ARP_UP_DOWN_PLUS,  // 4: Up and down with repeated end points
+  ARP_DOWN_UP_PLUS,  // 5: Down and up with repeated end points
+  ARP_CONVERGE,      // 6: Outside in (highest, lowest, 2nd highest, 2nd lowest...)
+  ARP_DIVERGE,       // 7: Inside out (middle outward)
+  ARP_PINKY_UP,      // 8: Alternate between notes and highest note
+  ARP_THUMB_UP,      // 9: Alternate between lowest and other notes
+  ARP_UP_DOWN_ALT,   // a: Up-down alternating pattern
+  ARP_DOWN_UP_ALT,   // b: Down-up alternating pattern  
+  ARP_RANDOM,        // c: Random selection
+  ARP_BOUNCE,        // d: Bouncing pattern
   ARP_PATTERN_COUNT
 } ArpPatternType;
 
-// Define the MAX_SCALE_LENGTH constant for pattern arrays
-#define MAX_SCALE_LENGTH 18
+// Arpeggiator state for tracking position
+typedef struct {
+  Usz step_counter;
+  Usz last_pattern;
+  Usz last_range;
+} Arp_state;
 
-// Function to get the scale degree based on pattern type and step
-static Usz get_pattern_degree(ArpPatternType pattern, Usz step, Usz scale_length, 
-                             Oper_extra_params *extra_params, Usz tick_number) {
-  if (scale_length == 0)
+#define MAX_ARP_GRID_SIZE 4096
+static Arp_state arp_states[MAX_ARP_GRID_SIZE] = {0};
+
+// Function to get the degree based on pattern type and step
+static Usz get_arp_degree(ArpPatternType pattern, Usz step, Usz range, 
+                         Oper_extra_params *extra_params) {
+  // Assume a 7-note scale and multiply by range for total degrees
+  Usz scale_length = 7;
+  Usz total_degrees = scale_length * range;
+  
+  if (total_degrees == 0)
     return 0;
 
   switch (pattern) {
   case ARP_UP:
-    return step % scale_length;
+    return step % total_degrees;
 
   case ARP_DOWN:
-    return (scale_length - 1) - (step % scale_length);
+    return (total_degrees - 1) - (step % total_degrees);
 
   case ARP_UP_DOWN: {
-    Usz period = (scale_length * 2) - 2;
-    if (period < 2)
-      period = 2;
+    Usz period = (total_degrees * 2) - 2;
+    if (period < 2) period = 2;
     Usz pos = step % period;
-    return pos < scale_length ? pos : period - pos;
+    return pos < total_degrees ? pos : period - pos;
   }
 
   case ARP_DOWN_UP: {
-    Usz period = (scale_length * 2) - 2;
-    if (period < 2)
-      period = 2;
+    Usz period = (total_degrees * 2) - 2;
+    if (period < 2) period = 2;
     Usz pos = step % period;
-    return pos < scale_length ? (scale_length - 1) - pos
-                              : pos - scale_length + 1;
+    return pos < total_degrees ? (total_degrees - 1) - pos : pos - total_degrees + 1;
   }
 
   case ARP_UP_DOWN_PLUS: {
-    // Up and down with end notes played twice
-    Usz period = scale_length * 2;
+    Usz period = total_degrees * 2;
     Usz pos = step % period;
-    if (pos < scale_length) {
-      return pos; // Ascending phase
-    } else {
-      return period - pos - 1; // Descending phase
-    }
+    return pos < total_degrees ? pos : period - pos - 1;
   }
 
   case ARP_DOWN_UP_PLUS: {
-    // Down and up with end notes played twice
-    Usz period = scale_length * 2;
+    Usz period = total_degrees * 2;
     Usz pos = step % period;
-    if (pos < scale_length) {
-      return scale_length - pos - 1; // Descending phase
-    } else {
-      return pos - scale_length; // Ascending phase
-    }
+    return pos < total_degrees ? total_degrees - pos - 1 : pos - total_degrees;
   }
 
   case ARP_CONVERGE: {
-    // Outside in (highest, lowest, 2nd highest, 2nd lowest...)
-    Usz period = scale_length;
-    Usz pos = step % period;
-    Usz order[MAX_SCALE_LENGTH];
-
-    // Build the converge pattern
-    Usz left = 0, right = scale_length - 1;
-    for (Usz i = 0; i < scale_length; i++) {
-      if (i % 2 == 0) {
-        order[i] = right--;
-      } else {
-        order[i] = left++;
-      }
+    Usz pos = step % total_degrees;
+    Usz left = 0, right = total_degrees - 1;
+    for (Usz i = 0; i < pos; i++) {
+      if (i % 2 == 0) right--; else left++;
     }
-
-    return order[pos];
+    return (pos % 2 == 0) ? right : left;
   }
 
   case ARP_DIVERGE: {
-    // Inside out (middle outward)
-    Usz period = scale_length;
-    Usz pos = step % period;
-    Usz order[MAX_SCALE_LENGTH];
-
-    // Build the diverge pattern
-    Usz midL = (scale_length - 1) / 2;
-    Usz midR = scale_length / 2;
-    Usz idx = 0;
-    Usz offset = 0;
-
-    while (idx < scale_length) {
-      if (midR + offset < scale_length) {
-        order[idx++] = midR + offset;
-      }
-      if (idx < scale_length && midL - offset >= 0) {
-        order[idx++] = midL - offset;
-      }
-      offset++;
-    }
-
-    return order[pos];
-  }
-
-  case ARP_CON_DIVERGE: {
-    // Converge followed by diverge
-    Usz con_len = scale_length;
-    Usz div_len = scale_length > 2
-                      ? scale_length - 2
-                      : 0; // Remove first and last for diverge part
-    Usz full_period = con_len + div_len;
-
-    if (full_period == 0)
-      return 0;
-
-    Usz pos = step % full_period;
-
-    if (pos < con_len) {
-      // Converge part (same as ARP_CONVERGE)
-      Usz order[MAX_SCALE_LENGTH];
-      Usz left = 0, right = scale_length - 1;
-      for (Usz i = 0; i < scale_length; i++) {
-        if (i % 2 == 0) {
-          order[i] = right--;
-        } else {
-          order[i] = left++;
-        }
-      }
-      return order[pos];
+    Usz pos = step % total_degrees;
+    Usz mid = total_degrees / 2;
+    Usz offset = pos / 2;
+    if (pos % 2 == 0) {
+      return (mid + offset < total_degrees) ? mid + offset : total_degrees - 1;
     } else {
-      // Diverge part (same as ARP_DIVERGE but skip first and last notes)
-      pos = pos - con_len;
-      Usz order[MAX_SCALE_LENGTH];
-      Usz midL = (scale_length - 1) / 2;
-      Usz midR = scale_length / 2;
-      Usz idx = 0;
-      Usz offset = 0;
-
-      while (idx < div_len) {
-        if (midR + offset < scale_length - 1 && midR + offset > 0) {
-          order[idx++] = midR + offset;
-        }
-        if (idx < div_len && midL - offset > 0 &&
-            midL - offset < scale_length - 1) {
-          order[idx++] = midL - offset;
-        }
-        offset++;
-      }
-
-      return order[pos % div_len];
+      return (mid > offset) ? mid - offset - 1 : 0;
     }
   }
 
   case ARP_PINKY_UP: {
-    // Alternate between notes and highest note
-    if (scale_length <= 1)
-      return 0;
-
-    Usz highest = scale_length - 1;
-    Usz pos = step % (scale_length * 2 - 2);
-
-    if (pos % 2 == 0) {
-      return pos / 2;
-    } else {
-      return highest;
-    }
-  }
-
-  case ARP_PINKY_UP_DOWN: {
-    // Alternate up and down with highest note
-    if (scale_length <= 1)
-      return 0;
-
-    Usz highest = scale_length - 1;
-    Usz up_section = (scale_length - 1) * 2;
-    Usz down_section = (scale_length - 2) * 2;
-    Usz full_period = up_section + down_section;
-
-    if (full_period == 0)
-      return 0;
-
-    Usz pos = step % full_period;
-
-    if (pos < up_section) {
-      // Up section: alternate with highest
-      if (pos % 2 == 0) {
-        return pos / 2;
-      } else {
-        return highest;
-      }
-    } else {
-      // Down section: alternate with highest
-      pos = pos - up_section;
-      if (pos % 2 == 0) {
-        return highest - 1 - (pos / 2);
-      } else {
-        return highest;
-      }
-    }
+    if (total_degrees <= 1) return 0;
+    Usz highest = total_degrees - 1;
+    Usz pos = step % (total_degrees * 2 - 2);
+    return (pos % 2 == 0) ? pos / 2 : highest;
   }
 
   case ARP_THUMB_UP: {
-    // Alternate between lowest and other notes
-    if (scale_length <= 1)
-      return 0;
+    if (total_degrees <= 1) return 0;
+    Usz pos = step % ((total_degrees - 1) * 2);
+    return (pos % 2 == 0) ? 0 : (pos / 2) + 1;
+  }
 
-    Usz lowest = 0;
-    Usz pos = step % ((scale_length - 1) * 2);
-
-    if (pos % 2 == 0) {
-      return lowest;
+  case ARP_UP_DOWN_ALT: {
+    Usz half_period = total_degrees;
+    Usz pos = step % (half_period * 2);
+    if (pos < half_period) {
+      return pos;
     } else {
-      return (pos / 2) + 1;
+      return total_degrees - 1 - (pos - half_period);
     }
   }
 
-  case ARP_THUMB_UP_DOWN: {
-    // Alternate up and down with lowest note
-    if (scale_length <= 1)
-      return 0;
-
-    Usz lowest = 0;
-    Usz up_section = (scale_length - 1) * 2;
-    Usz down_section = (scale_length - 2) * 2;
-    Usz full_period = up_section + down_section;
-
-    if (full_period == 0)
-      return 0;
-
-    Usz pos = step % full_period;
-
-    if (pos < up_section) {
-      // Up section
-      if (pos % 2 == 0) {
-        return lowest;
-      } else {
-        return (pos / 2) + 1;
-      }
+  case ARP_DOWN_UP_ALT: {
+    Usz half_period = total_degrees;
+    Usz pos = step % (half_period * 2);
+    if (pos < half_period) {
+      return total_degrees - 1 - pos;
     } else {
-      // Down section
-      pos = pos - up_section;
-      if (pos % 2 == 0) {
-        return lowest;
-      } else {
-        return scale_length - 1 - (pos / 2);
-      }
+      return pos - half_period;
     }
   }
 
   case ARP_RANDOM: {
-    // Use deterministic random based on step and random_seed
-    Usz key = (extra_params->random_seed + step) ^ (tick_number << 16);
+    Usz key = (extra_params->random_seed + step) ^ (step << 16);
     key = (key ^ 61) ^ (key >> 16);
     key = key + (key << 3);
     key = key ^ (key >> 4);
     key = key * 0x27d4eb2d;
     key = key ^ (key >> 15);
-    return key % scale_length;
+    return key % total_degrees;
+  }
+
+  case ARP_BOUNCE: {
+    Usz bounce_size = total_degrees / 3;
+    if (bounce_size < 1) bounce_size = 1;
+    Usz pos = step % (bounce_size * 4);
+    if (pos < bounce_size) return pos;
+    else if (pos < bounce_size * 2) return bounce_size - 1 - (pos - bounce_size);
+    else if (pos < bounce_size * 3) return pos - bounce_size * 2;
+    else return bounce_size - 1 - (pos - bounce_size * 3);
   }
 
   default:
-    return 0;
+    return step % total_degrees;
   }
 }
 
-BEGIN_OPERATOR(midiarpeggiator)
-  // Pattern, Step, Range inputs
-  PORT(0, -3, IN | PARAM); // Pattern Type (0-13)
-  PORT(0, -2, IN | PARAM); // Current Step
-  PORT(0, -1, IN | PARAM); // Octave Range (1-4)
+BEGIN_OPERATOR(arpeggiator)
+  LOWERCASE_REQUIRES_BANG;
+  PORT(0, -1, IN | PARAM); // Pattern (0-9, a-d)
+  PORT(0, 1, IN | PARAM);  // Range (1-4)
+  PORT(1, 0, OUT);         // Degree output
 
-  // MIDI parameters
-  PORT(0, 1, IN); // Channel
-  PORT(0, 2, IN); // Base Octave
-  PORT(0, 3, IN); // Root note
-  PORT(0, 4, IN); // Scale type (0-h)
-  PORT(0, 5, IN); // Velocity
-  PORT(0, 6, IN); // Length
-
-  PORT(0, 0, OUT); // Mark output
-
-  STOP_IF_NOT_BANGED;
-
-  // Get pattern parameters
-  Usz pattern_type = index_of(PEEK(0, -3)) % ARP_PATTERN_COUNT;
-  Usz current_step = index_of(PEEK(0, -2));
-  Usz octave_range = index_of(PEEK(0, -1));
-  if (octave_range == 0)
-    octave_range = 1;
-  if (octave_range > 4)
-    octave_range = 4;
-
-  // Get MIDI parameters
-  Usz channel = index_of(PEEK(0, 1));
-  if (channel > 15)
-    channel = 15;
-
-  Usz base_octave = index_of(PEEK(0, 2));
-  if (base_octave > 9)
-    base_octave = 9;
-
-  // Get root note and scale
-  Glyph root_note_glyph = PEEK(0, 3);
-  U8 root_note_num = midi_note_number_of(root_note_glyph);
-  if (root_note_num == UINT8_MAX)
+  // Calculate state index
+  Usz state_idx = y * width + x;
+  if (state_idx >= MAX_ARP_GRID_SIZE)
     return;
 
-  Usz scale_index = index_of(PEEK(0, 4));
-  if (scale_index >= sizeof(scales_and_chords) / sizeof(scales_and_chords[0]))
+  Arp_state *state = &arp_states[state_idx];
+
+  // Get inputs
+  Glyph pattern_g = PEEK(0, -1);
+  Glyph range_g = PEEK(0, 1);
+
+  if (pattern_g == '.' || range_g == '.')
     return;
 
-  // Get scale length and scale intervals
-  Usz scale_length = scale_chord_lengths[scale_index];
-  Usz *scale = scales_and_chords[scale_index];
+  Usz pattern = index_of(pattern_g) % ARP_PATTERN_COUNT;
+  Usz range = index_of(range_g);
+  if (range == 0) range = 1;
+  if (range > 4) range = 4;
 
-  // Calculate octave offset
-  Usz octave_offset = (current_step / scale_length) % octave_range;
+  // Reset counter if pattern or range changed
+  if (state->last_pattern != pattern || state->last_range != range) {
+    state->step_counter = 0;
+    state->last_pattern = pattern;
+    state->last_range = range;
+  }
 
-  // Get the scale degree based on pattern type and step
-  Usz degree = get_pattern_degree((ArpPatternType)pattern_type, current_step,
-                                  scale_length, extra_params, Tick_number);
+  // Get degree for current step
+  Usz degree = get_arp_degree((ArpPatternType)pattern, state->step_counter, range, extra_params);
 
-  // Calculate semitone offset from scale
-  Usz semitone_offset = scale[degree];
+  // Output degree
+  POKE(1, 0, glyph_of(degree));
 
-  // Calculate total semitones and resulting octave/note
-  Usz total_semitones = root_note_num + semitone_offset;
-  Usz final_note = total_semitones % 12;
-  Usz octave_increment = total_semitones / 12;
-  Usz final_octave = base_octave + octave_offset + octave_increment;
-
-  // Ensure octave is in valid range
-  if (final_octave > 9)
-    return;
-
-  // Get velocity and duration
-  Glyph velocity_g = PEEK(0, 5);
-  Glyph length_g = PEEK(0, 6);
-
-  U8 velocity =
-      (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-  if (velocity > 127)
-    velocity = 127;
-
-  // Create and send MIDI note event
-  Oevent_midi_note *oe =
-      (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-  oe->oevent_type = Oevent_type_midi_note;
-  oe->channel = (U8)channel;
-  oe->octave = (U8)final_octave;
-  oe->note = (U8)final_note;
-  oe->velocity = velocity;
-  oe->duration = (U8)(index_of(length_g) & 0x7Fu);
-  oe->mono = 1; // Use monophonic mode
+  // Increment step counter for next bang
+  state->step_counter++;
 END_OPERATOR
 
 // BOORCH's new Random Unique

@@ -2280,7 +2280,7 @@ static void push_opers_guide_msg(void) {
       // {';', "udp", "Sends UDP message."},
       {'^', "scale", "Outputs note base on root, scale, degree."},
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
-      {'&', "midiarpeggiator", "MIDI Arpeggiator."},
+      {'&', "arpeggiator", "Outputs degree numbers for Scale operator."},
       {';', "bouncer", "A rudimentary LFO-like operator."}
       };
   int w_desc = 0;

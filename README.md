@@ -25,9 +25,11 @@ Outputs note and octave based on the provided root note, scale/chord type, and d
 |:------:|:--------:|:--------:|:-----:|:------:|
 |   ^    |    O     |    R     |   S   |   D    |
 
+**Output:** The Scale operator outputs the octave above the operator and the note to the right of the operator.
+
 ### Scale Examples (0-9):
-- `^3C02` - C Major scale, 3rd degree → outputs '3e' (E3)
-- `^.C12` - C Minor scale, 3rd degree → outputs 'eb' (Eb)
+- `^3C02` - C Major scale, 3rd degree → outputs octave '3' and note 'E'
+- `^.C12` - C Minor scale, 3rd degree → outputs note 'd' (D#/Eb, no octave)
 
 ### Chord Examples (a-z = root position, A-Z = first inversion):
 - `^3Ca2` - C Major chord, 3rd note → outputs '3g' (G3)
@@ -139,66 +141,57 @@ The `R` operator (uppercase) provides pure random generation that runs every tic
 - **`r` (lowercase)**: Shuffle-based random, requires bang to avoid consecutive duplicates
 
 
-## MIDI Arpeggiator Operator (`&`):
-The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequences from a single root note and scale across specified octave ranges. It supports dynamic pattern control, allowing for various melodic sequences. It only sends MIDI when it's "banged". This bears the possibility of coming up with quite unique patterns since it decouples when a note is "selected" and when a note is "played".
+## Arpeggiator Operator (`&`):
+The Arpeggiator operator (`&`) is a simplified degree-based arpeggiator that outputs degree numbers (0, 1, 2, 3...) instead of MIDI directly. This creates a modular system where the arpeggiator feeds degree numbers to the Scale operator (`^`), which then feeds notes to the MIDI operator (`:`). It only executes when banged (lowercase `&`) and uses internal state tracking.
 
-| Parameter     | Description                                               |
-|---------------|-----------------------------------------------------------|
-| Arp Pattern   | Selects the arpeggiation pattern.                         |
-| Note to Play  | Determines the current note in the arpeggio pattern.      |
-| Octave Range  | Sets the range and direction of octaves for arpeggiation. |
-| Operator      | "&"                                                       |
-| Channel       | MIDI channel for output.                                  |
-| Base Octave   | Starting octave for the first note in the pattern.        |
-| Root Note     | The root note that defines the key of the arpeggio.       |
-| Scale Type    | Scale/chord type index (0-9 for scales, a-z/A-Z for chords). |
-| Velocity      | MIDI velocity of the played notes.                        |
-| Duration      | Length of each note in the sequence.                      |
+The operator reduces complexity by requiring only 2 inputs (pattern and range) while maintaining all pattern functionality through a cleaner separation of concerns:
+- `&` (arpeggiator) → `^` (scale) → `:` (midi)
 
 ### Inputs
 
-| Arp Pattern | Note to Play | Octave Range | Operator | Channel | Base Octave | Root Note | Scale Type | Velocity | Duration |
-|:-----------:|:------------:|:------------:|:--------:|:-------:|:-----------:|:---------:|:----------:|:--------:|:--------:|
-|      P      |       N      |       R      |    &     |    C    |      O      |     R     |     S      |    V     |    D     |
+| Pattern | Operator | Range |
+|:-------:|:--------:|:-----:|
+|    P    |    &     |   R   |
 
-- `P`: Arpeggio Pattern Index (0-13 for predefined patterns)
-- `N`: Note to play (based on selected arpeggio pattern's offset)
-- `R`: Octave range (1-4, higher values for wider octave range)
-- `C`: MIDI channel (0-F)
-- `O`: Base octave for the root note
-- `R`: Root note (like C, c, D, etc.)
-- `S`: Scale type (0-9 for scales, a-z/A-Z for chords - matching the Scale Operator options)
-- `V`: Velocity
-- `D`: Duration
+- `P`: Pattern (0-9, a-d) - Selects the arpeggiation pattern
+- `R`: Range (1-4) - Sets the octave range for arpeggiation
+
+### Output
+- Outputs degree numbers to the right of the operator
 
 ### Example
 
-- `011&04C0f3`: This example uses arpeggio pattern `0`, plays the second note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, Major scale `0`, velocity `f`, and duration `3`.
+```
+.C&1.....^3Ca...:03.ff
+.012.....0.....0......
+```
 
-This operator generates a MIDI arpeggiated sequence based on the input parameters, allowing for intricate rhythmic patterns to be easily created and manipulated live. Adjust the `Arp Pattern`, `Note to Play`, and `Octave Range` to explore different musical ideas.
+This example:
+1. Clock (`C`) bangs the arpeggiator every tick
+2. Arpeggiator (`&`) uses pattern 1 (descending) with range 2 
+3. Scale operator (`^`) converts degrees to notes using octave 3, C major scale
+4. MIDI operator (`:`) plays the notes on channel 0 with velocity f, duration f
 
 ### Arpeggio Patterns
 
-Each pattern is defined by a sequence of steps that dictate the order of arpeggiation. Below are the currently available patterns and their descriptions:
+| Pattern | Description | Pattern Style |
+|:-------:|-------------|---------------|
+| 0 | Up | Ascending notes in scale |
+| 1 | Down | Descending notes in scale |
+| 2 | Up-Down | Ascending then descending (no repeat at turn points) |
+| 3 | Down-Up | Descending then ascending (no repeat at turn points) |
+| 4 | Up-Down+ | Ascending then descending (with repeated turn points) |
+| 5 | Down-Up+ | Descending then ascending (with repeated turn points) |
+| 6 | Converge | Outside in (highest, lowest, 2nd highest, 2nd lowest...) |
+| 7 | Diverge | Inside out (middle notes outward) |
+| 8 | Pinky Up | Alternate between notes and highest note |
+| 9 | Thumb Up | Alternate between lowest and other notes |
+| a | Up-Down Alt | Up-down alternating pattern |
+| b | Down-Up Alt | Down-up alternating pattern |
+| c | Random | Random selection from scale degrees |
+| d | Bounce | Bouncing pattern |
 
-To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeggiator operator (`&`). The `Note to Play` input determines which step in the selected pattern to play, allowing the sequence to progress. Suggestions: Connect `Note to Play` to a Clock operator, or a Track operator, or a Random Unique operator for complex and/or unexpected patterns.
-
-| Pattern Index | Description         | Pattern Style                      |
-|---------------|---------------------|-----------------------------------|
-| 0             | Up                  | Ascending notes in scale          |
-| 1             | Down                | Descending notes in scale         |
-| 2             | Up-Down             | Ascending then descending (no repeat at turn points) |
-| 3             | Down-Up             | Descending then ascending (no repeat at turn points) |
-| 4             | Up-Down+            | Ascending then descending (with repeated turn points) |
-| 5             | Down-Up+            | Descending then ascending (with repeated turn points) |
-| 6             | Converge            | Outside in (highest, lowest, 2nd highest, 2nd lowest...) |
-| 7             | Diverge             | Inside out (middle notes outward) |
-| 8             | Converge-Diverge    | Converge pattern followed by diverge pattern |
-| 9             | Pinky Up            | Alternate between notes and highest note |
-| a             | Pinky Up-Down       | Alternate up and down with highest note |
-| b             | Thumb Up            | Alternate between lowest and other notes |
-| c             | Thumb Up-Down       | Alternate up and down with lowest note |
-| d             | Random              | Random selection from scale degrees |
+The modular design allows for flexible combinations: use the arpeggiator with any scale/chord from the Scale operator, and route the output to any MIDI operator for complete control over timing, velocity, and duration.
 
 
 ## Bouncer (`;`) (A rudimentary LFO interpretation)
