@@ -181,13 +181,15 @@ The modular design allows for flexible combinations: use the arpeggiator with an
 
 ## Bouncer (`&`) (A rudimentary LFO interpretation)
 
-The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some steps are repeating to reflect the 'waveform' as precisely as possible, e.g: closer to peaks of a sine wave). Rate input skips every Nth step to make it "scan" through the waveform faster. For example, by default an sequence can last for 128 ticks (max resolution of waveorms), if you set it to 2, it skips every other step. It's almost like the higher the value, the faster the 'LFO Speed' is. By setting the Start and End value, you have control over the 'amplitude' of the waveform (like the 'amount' of the modulation).
+The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some steps are repeating to reflect the 'waveform' as precisely as possible, e.g: closer to peaks of a sine wave). 
+
+The Rate parameter controls the speed of waveform traversal: Rate 0 = no movement, Rate 1 = advance 1 step per tick (slowest), Rate 2 = advance 2 steps per tick (faster), etc. Higher rate values make the waveform cycle faster but with lower resolution. By setting the Start and End values, you control the amplitude/range of the waveform output.
 
 ### Inputs
 
-| Start Value | End Value | Operator | Rate | Shape |
-|:------:|:------:|:--------:|:------:|:------:|
-|   A    |   B    |    &     |   R    |   S    |
+| Operator | Start Value | End Value | Rate | Shape |
+|:--------:|:------:|:------:|:------:|:------:|
+|    &     |   A    |   B    |   R    |   S    |
 
 - `A`: Start value (0-z)
 - `B`: End value (0-z)
@@ -196,8 +198,8 @@ The bouncer operator creates smooth transitions between two values using various
 
 ### Example
 
-- `;3a2C`
-- Transitions between values 3 and a using waveform pattern 2 (Sine) at speed C
+- `&3a22`
+- Transitions between values 3 and a, with rate 2 (advances 2 steps per tick), using waveform shape 2 (Sine)
 
 #### Waveform Shapes
 

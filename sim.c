@@ -1670,16 +1670,16 @@ typedef struct {
 static Bouncer_state bouncer_states[4096] = {0};
 
 BEGIN_OPERATOR(bouncer)
-  PORT(0, -2, IN | PARAM); // Start value (a)
-  PORT(0, -1, IN | PARAM); // End value (b)
-  PORT(0, 1, IN);          // Rate (ticks per cycle)
-  PORT(0, 2, IN);          // Shape (0-7 for different waveforms)
+  PORT(0, 1, IN | PARAM); // Start value (a)
+  PORT(0, 2, IN | PARAM); // End value (b)
+  PORT(0, 3, IN);          // Rate (ticks per cycle)
+  PORT(0, 4, IN);          // Shape (0-7 for different waveforms)
   PORT(1, 0, OUT);
 
-  Glyph start_g = PEEK(0, -2);
-  Glyph end_g = PEEK(0, -1);
-  Glyph rate_g = PEEK(0, 1);
-  Glyph shape_g = PEEK(0, 2);
+  Glyph start_g = PEEK(0, 1);
+  Glyph end_g = PEEK(0, 2);
+  Glyph rate_g = PEEK(0, 3);
+  Glyph shape_g = PEEK(0, 4);
 
   if (start_g == '.' || end_g == '.')
     return;
