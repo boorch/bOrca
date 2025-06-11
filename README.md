@@ -149,12 +149,12 @@ The operator reduces complexity by requiring only 2 inputs (pattern and range) w
 
 ### Inputs
 
-| Pattern | Operator | Range |
-|:-------:|:--------:|:-----:|
-|    P    |    ;     |   R   |
+| Range | Operator | Pattern |
+|:-----:|:--------:|:-------:|
+|   R   |    ;     |    P    |
 
-- `P`: Pattern (0-9, a-d) - Selects the arpeggiation pattern
 - `R`: Range (1-4) - Sets the octave range for arpeggiation
+- `P`: Pattern (0-9, a-d) - Selects the arpeggiation pattern
 
 ### Output
 - Outputs degree numbers to the right of the operator
@@ -162,15 +162,15 @@ The operator reduces complexity by requiring only 2 inputs (pattern and range) w
 ### Example
 
 ```
-.C;1.....#3Ca...:03.ff
-.012.....0.....0......
+D8;21.....$3Ca0.:03.ff
+..1......0.....0......
 ```
 
 This example:
-1. Clock (`C`) bangs the arpeggiator every tick
-2. Arpeggiator (`;`) uses pattern 1 (descending) with range 2 
-3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale
-4. MIDI operator (`:`) plays the notes on channel 0 with velocity f, duration f
+1. Delay (`D`) with value 8 bangs the arpeggiator every 8 ticks
+2. Arpeggiator (`;`) uses range 2, pattern 1 (descending) 
+3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale, degree 0
+4. MIDI operator (`:`) plays the notes on channel 0 with velocity 3, duration f
 
 ### Arpeggio Patterns
 

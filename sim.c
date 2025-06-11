@@ -1522,8 +1522,8 @@ static Usz get_arp_degree(ArpPatternType pattern, Usz step, Usz range,
 
 BEGIN_OPERATOR(arpeggiator)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM); // Pattern (0-9, a-d)
   PORT(0, 1, IN | PARAM);  // Range (1-4)
+  PORT(0, 2, IN | PARAM);  // Pattern (0-9, a-d)
   PORT(1, 0, OUT);         // Degree output
 
   // Calculate state index
@@ -1534,14 +1534,14 @@ BEGIN_OPERATOR(arpeggiator)
   Arp_state *state = &arp_states[state_idx];
 
   // Get inputs
-  Glyph pattern_g = PEEK(0, -1);
   Glyph range_g = PEEK(0, 1);
+  Glyph pattern_g = PEEK(0, 2);
 
-  if (pattern_g == '.' || range_g == '.')
+  if (range_g == '.' || pattern_g == '.')
     return;
 
-  Usz pattern = index_of(pattern_g) % ARP_PATTERN_COUNT;
   Usz range = index_of(range_g);
+  Usz pattern = index_of(pattern_g) % ARP_PATTERN_COUNT;
   if (range == 0) range = 1;
   if (range > 4) range = 4;
 
