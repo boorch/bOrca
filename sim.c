@@ -177,7 +177,6 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('?', midipb)                                                               \
   _('^', scale)                                                                \
   _('|', midipoly)                                                             \
-  _('$', randomunique)                                                         \
   _('&', midiarpeggiator)
 
 #define ALPHA_OPERATORS(_)                                                     \
@@ -1022,41 +1021,6 @@ BEGIN_OPERATOR(query)
   }
 END_OPERATOR
 
-BEGIN_OPERATOR(random)
-  LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
-  Glyph gb = PEEK(0, 1);
-  Usz a = index_of(PEEK(0, -1));
-  Usz b = index_of(gb);
-  if (b == 0)
-    b = 36;
-  Usz min, max;
-  if (a == b) {
-    POKE(1, 0, glyph_of(a));
-    return;
-  } else if (a < b) {
-    min = a;
-    max = b;
-  } else {
-    min = b;
-    max = a;
-  }
-  // Initial input params for the hash
-  Usz key = (extra_params->random_seed + y * width + x) ^
-            (Tick_number << UINT32_C(16));
-  // 32-bit shift_mult hash to evenly distribute bits
-  key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
-  key = key + (key << UINT32_C(3));
-  key = key ^ (key >> UINT32_C(4));
-  key = key * UINT32_C(0x27d4eb2d);
-  key = key ^ (key >> UINT32_C(15));
-  // Hash finished. Restrict to desired range of numbers.
-  Usz val = key % (max - min) + min;
-  POKE(1, 0, glyph_with_case(glyph_of(val), gb));
-END_OPERATOR
-
 BEGIN_OPERATOR(track)
   LOWERCASE_REQUIRES_BANG;
   Usz key = index_of(PEEK(0, -2));
@@ -1791,51 +1755,89 @@ static void initialize_sequence(Usz min, Usz max) {
 
 void reset_last_unique_value(void) { unique_random_state.initialized = false; }
 
-BEGIN_OPERATOR(randomunique)
-  LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM); // Min
-  PORT(0, 1, IN);          // Max
-  PORT(1, 0, OUT);         // Output
+// Modified random operator for lowercase 'r' - requires bang, uses shuffle to avoid consecutive duplicates
+BEGIN_OPERATOR(random)
+  // Check if this is lowercase 'r' (shuffle/unique random) or uppercase 'R' (pure random)
+  if (glyph_is_lowercase(This_oper_char)) {
+    // Lowercase 'r' - requires bang and uses shuffle algorithm
+    LOWERCASE_REQUIRES_BANG;
+    PORT(0, -1, IN | PARAM); // Min
+    PORT(0, 1, IN);          // Max
+    PORT(1, 0, OUT);         // Output
 
-  Glyph min_glyph = PEEK(0, -1);
-  Glyph max_glyph = PEEK(0, 1);
+    Glyph min_glyph = PEEK(0, -1);
+    Glyph max_glyph = PEEK(0, 1);
 
-  if (min_glyph == '.' || max_glyph == '.') {
-    return;
+    if (min_glyph == '.' || max_glyph == '.') {
+      return;
+    }
+
+    Usz min = index_of(min_glyph);
+    Usz max = index_of(max_glyph);
+
+    if (max < min) {
+      Usz temp = min;
+      min = max;
+      max = temp;
+    }
+
+    // Initialize or reinitialize if needed
+    if (!unique_random_state.initialized ||
+        unique_random_state.current_index >= unique_random_state.sequence_size ||
+        min != unique_random_state.last_min ||
+        max != unique_random_state.last_max) {
+      initialize_sequence(min, max);
+      unique_random_state.initialized = true;
+      unique_random_state.last_min = min;
+      unique_random_state.last_max = max;
+    }
+
+    // Get next value from sequence
+    Usz result = unique_random_state.sequence[unique_random_state.current_index];
+    unique_random_state.current_index++;
+
+    // Reshuffle if we've used all values
+    if (unique_random_state.current_index >= unique_random_state.sequence_size) {
+      shuffle_sequence(unique_random_state.sequence,
+                       unique_random_state.sequence_size);
+      unique_random_state.current_index = 0;
+    }
+
+    POKE(1, 0, glyph_of(result));
+  } else {
+    // Uppercase 'R' - pure random, evaluated every tick
+    PORT(0, -1, IN | PARAM);
+    PORT(0, 1, IN);
+    PORT(1, 0, OUT);
+    Glyph gb = PEEK(0, 1);
+    Usz a = index_of(PEEK(0, -1));
+    Usz b = index_of(gb);
+    if (b == 0)
+      b = 36;
+    Usz min, max;
+    if (a == b) {
+      POKE(1, 0, glyph_of(a));
+      return;
+    } else if (a < b) {
+      min = a;
+      max = b;
+    } else {
+      min = b;
+      max = a;
+    }
+    // Initial input params for the hash
+    Usz key = (extra_params->random_seed + y * width + x) ^
+              (Tick_number << UINT32_C(16));
+    // 32-bit shift_mult hash to evenly distribute bits
+    key = (key ^ UINT32_C(61)) ^ (key >> UINT32_C(16));
+    key = key + (key << UINT32_C(3));
+    key = key ^ (key >> UINT32_C(4));
+    key = key * UINT32_C(0x27d4eb2d);
+    key = key ^ (key >> UINT32_C(15));
+    // Hash finished. Restrict to desired range of numbers.
+    Usz val = key % (max - min) + min;
+    POKE(1, 0, glyph_with_case(glyph_of(val), gb));
   }
-
-  Usz min = index_of(min_glyph);
-  Usz max = index_of(max_glyph);
-
-  if (max < min) {
-    Usz temp = min;
-    min = max;
-    max = temp;
-  }
-
-  // Initialize or reinitialize if needed
-  if (!unique_random_state.initialized ||
-      unique_random_state.current_index >= unique_random_state.sequence_size ||
-      min != unique_random_state.last_min ||
-      max != unique_random_state.last_max) {
-    initialize_sequence(min, max);
-    unique_random_state.initialized = true;
-    unique_random_state.last_min = min;
-    unique_random_state.last_max = max;
-  }
-
-  // Get next value from sequence
-  Usz result = unique_random_state.sequence[unique_random_state.current_index];
-  unique_random_state.current_index++;
-
-  // Reshuffle if we've used all values
-  if (unique_random_state.current_index >= unique_random_state.sequence_size) {
-    shuffle_sequence(unique_random_state.sequence,
-                     unique_random_state.sequence_size);
-    unique_random_state.current_index = 0;
-  }
-
-  POKE(1, 0, glyph_of(result));
 END_OPERATOR
 
 // BOORCH's BOUNCER OP

@@ -129,8 +129,11 @@ The Midichord operator outputs MIDI notes to form common chord types based on a 
 | u | Major 7#11 |
 | v | Minor add11 |
 
-## Random Unique Operator (`$`):
-Requires bang. Similar to the Random Operator, but designed to avoid producing identical outputs on consecutive bangs in a creative (in other words, "hacky") manner.
+## Random Operators (`R` and `r`):
+The `R` operator (uppercase) provides pure random generation that runs every tick. The `r` operator (lowercase) requires bang and uses a shuffle-based algorithm to avoid producing identical outputs on consecutive bangs in a creative manner.
+
+- **`R` (uppercase)**: Pure random, runs every tick
+- **`r` (lowercase)**: Shuffle-based random, requires bang to avoid consecutive duplicates
 
 
 ## MIDI Arpeggiator Operator (`&`):
