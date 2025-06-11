@@ -18,22 +18,22 @@ I'll try to add new operators based on my needs. I'm not a professional programm
 - Using it through SSH on a Raspberry Pi Zero 2W, connected to an iPad Pro 11", outputting MIDI data via USB, acting as a MIDI Gadget
 - Using it on my uConsole terminal, paired to a CME WIDI Jack via Bluetooth, which is connected to the MIDI ports of a Torso S4.
 
-## Scale Operator (`^`) - Unified Scales and Chords:
+## Scale Operator (`$`) - Unified Scales and Chords:
 Outputs note and octave based on the provided root note, scale/chord type, and degree. The operator now supports a unified system with 62 total options: 10 essential scales (0-9), 26 chord root positions (a-z), and 26 chord first inversions (A-Z).
 
 | Operator | Octave | RootNote | Scale/Chord | Degree |
 |:------:|:--------:|:--------:|:-----:|:------:|
-|   ^    |    O     |    R     |   S   |   D    |
+|   $    |    O     |    R     |   S   |   D    |
 
 **Output:** The Scale operator outputs the octave above the operator and the note to the right of the operator.
 
 ### Scale Examples (0-9):
-- `^3C02` - C Major scale, 3rd degree → outputs octave '3' and note 'E'
-- `^.C12` - C Minor scale, 3rd degree → outputs note 'd' (D#/Eb, no octave)
+- `$3C02` - C Major scale, 3rd degree → outputs octave '3' and note 'E'
+- `$.C12` - C Minor scale, 3rd degree → outputs note 'd' (D#/Eb, no octave)
 
 ### Chord Examples (a-z = root position, A-Z = first inversion):
-- `^3Ca2` - C Major chord, 3rd note → outputs '3g' (G3)
-- `^3CA2` - C Major first inversion, 3rd note → outputs '4c' (C4)
+- `$3Ca2` - C Major chord, 3rd note → outputs '3g' (G3)
+- `$3CA2` - C Major first inversion, 3rd note → outputs '4c' (C4)
 
 ### Available Scales (0-9):
 | Value | Scale Type |
@@ -142,10 +142,10 @@ The `R` operator (uppercase) provides pure random generation that runs every tic
 
 
 ## Arpeggiator Operator (`&`):
-The Arpeggiator operator (`&`) is a simplified degree-based arpeggiator that outputs degree numbers (0, 1, 2, 3...) instead of MIDI directly. This creates a modular system where the arpeggiator feeds degree numbers to the Scale operator (`^`), which then feeds notes to the MIDI operator (`:`). It only executes when banged (lowercase `&`) and uses internal state tracking.
+The Arpeggiator operator (`&`) is a simplified degree-based arpeggiator that outputs degree numbers (0, 1, 2, 3...) instead of MIDI directly. This creates a modular system where the arpeggiator feeds degree numbers to the Scale operator (`$`), which then feeds notes to the MIDI operator (`:`). It only executes when banged (lowercase `&`) and uses internal state tracking.
 
 The operator reduces complexity by requiring only 2 inputs (pattern and range) while maintaining all pattern functionality through a cleaner separation of concerns:
-- `&` (arpeggiator) → `^` (scale) → `:` (midi)
+- `&` (arpeggiator) → `$` (scale) → `:` (midi)
 
 ### Inputs
 
@@ -162,14 +162,14 @@ The operator reduces complexity by requiring only 2 inputs (pattern and range) w
 ### Example
 
 ```
-.C&1.....^3Ca...:03.ff
+.C&1.....#3Ca...:03.ff
 .012.....0.....0......
 ```
 
 This example:
 1. Clock (`C`) bangs the arpeggiator every tick
 2. Arpeggiator (`&`) uses pattern 1 (descending) with range 2 
-3. Scale operator (`^`) converts degrees to notes using octave 3, C major scale
+3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale
 4. MIDI operator (`:`) plays the notes on channel 0 with velocity f, duration f
 
 ### Arpeggio Patterns

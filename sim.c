@@ -169,13 +169,13 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
 #define UNIQUE_OPERATORS(_)                                                    \
   _('!', midicc)                                                               \
   _('#', comment)                                                              \
+  _('$', scale)                                                                \
   _('%', midi)                                                                 \
   _('*', bang)                                                                 \
   _(':', midi)                                                                 \
   _(';', bouncer)                                                              \
   _('=', midichord)                                                            \
   _('?', midipb)                                                               \
-  _('^', scale)                                                                \
   _('|', midipoly)                                                             \
   _('&', arpeggiator)
 

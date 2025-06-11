@@ -2275,10 +2275,11 @@ static void push_opers_guide_msg(void) {
       {':', "midi", "Sends MIDI note."},
       {'!', "cc", "Sends MIDI control change."},
       {'?', "pb", "Sends MIDI pitch bend."},
+      {'$', "scale", "Outputs note base on root, scale, degree."},
       {'%', "mono", "Sends MIDI monophonic note."},
       {'=', "midichord", "Sends preset chords over MIDI."},
       // {';', "udp", "Sends UDP message."},
-      {'^', "scale", "Outputs note base on root, scale, degree."},
+      {'^', "", ""},
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'&', "arpeggiator", "Outputs degree numbers for Scale operator."},
       {';', "bouncer", "A rudimentary LFO-like operator."}
