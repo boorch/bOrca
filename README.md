@@ -167,7 +167,7 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 
 ### Example
 
-- `02a&04C0f3`: This example uses arpeggio pattern `2`, plays the first note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, chromatic scale `0`, velocity `f`, and duration `3`.
+- `011&04C0f3`: This example uses arpeggio pattern `0`, plays the second note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, chromatic scale `0`, velocity `f`, and duration `3`.
 
 This operator generates a MIDI arpeggiated sequence based on the input parameters, allowing for intricate rhythmic patterns to be easily created and manipulated live. Adjust the `Arp Pattern`, `Note to Play`, and `Octave Range` to explore different musical ideas.
 
