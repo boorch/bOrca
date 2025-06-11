@@ -173,11 +173,11 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _('%', midi)                                                                 \
   _('*', bang)                                                                 \
   _(':', midi)                                                                 \
-  _(';', bouncer)                                                              \
+  _(';', arpeggiator)                                                          \
   _('=', midichord)                                                            \
   _('?', midipb)                                                               \
   _('|', midipoly)                                                             \
-  _('&', arpeggiator)
+  _('&', bouncer)
 
 #define ALPHA_OPERATORS(_)                                                     \
   _('A', add)                                                                  \

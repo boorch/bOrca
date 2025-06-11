@@ -2279,10 +2279,10 @@ static void push_opers_guide_msg(void) {
       {'%', "mono", "Sends MIDI monophonic note."},
       {'=', "midichord", "Sends preset chords over MIDI."},
       // {';', "udp", "Sends UDP message."},
+      {';', "arpeggiator", "Outputs degree numbers for Scale operator."},
       {'^', "", ""},
       {'|', "midipoly", "Sends up to 3 MIDI notes."},
-      {'&', "arpeggiator", "Outputs degree numbers for Scale operator."},
-      {';', "bouncer", "A rudimentary LFO-like operator."}
+      {'&', "bouncer", "A rudimentary LFO-like operator."}
       };
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {

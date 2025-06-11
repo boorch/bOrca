@@ -141,17 +141,17 @@ The `R` operator (uppercase) provides pure random generation that runs every tic
 - **`r` (lowercase)**: Shuffle-based random, requires bang to avoid consecutive duplicates
 
 
-## Arpeggiator Operator (`&`):
-The Arpeggiator operator (`&`) is a simplified degree-based arpeggiator that outputs degree numbers (0, 1, 2, 3...) instead of MIDI directly. This creates a modular system where the arpeggiator feeds degree numbers to the Scale operator (`$`), which then feeds notes to the MIDI operator (`:`). It only executes when banged (lowercase `&`) and uses internal state tracking.
+## Arpeggiator Operator (`;`):
+The Arpeggiator operator (`;`) is a simplified degree-based arpeggiator that outputs degree numbers (0, 1, 2, 3...) instead of MIDI directly. This creates a modular system where the arpeggiator feeds degree numbers to the Scale operator (`$`), which then feeds notes to the MIDI operator (`:`). It only executes when banged (lowercase `;`) and uses internal state tracking.
 
 The operator reduces complexity by requiring only 2 inputs (pattern and range) while maintaining all pattern functionality through a cleaner separation of concerns:
-- `&` (arpeggiator) → `$` (scale) → `:` (midi)
+- `;` (arpeggiator) → `$` (scale) → `:` (midi)
 
 ### Inputs
 
 | Pattern | Operator | Range |
 |:-------:|:--------:|:-----:|
-|    P    |    &     |   R   |
+|    P    |    ;     |   R   |
 
 - `P`: Pattern (0-9, a-d) - Selects the arpeggiation pattern
 - `R`: Range (1-4) - Sets the octave range for arpeggiation
@@ -162,13 +162,13 @@ The operator reduces complexity by requiring only 2 inputs (pattern and range) w
 ### Example
 
 ```
-.C&1.....#3Ca...:03.ff
+.C;1.....#3Ca...:03.ff
 .012.....0.....0......
 ```
 
 This example:
 1. Clock (`C`) bangs the arpeggiator every tick
-2. Arpeggiator (`&`) uses pattern 1 (descending) with range 2 
+2. Arpeggiator (`;`) uses pattern 1 (descending) with range 2 
 3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale
 4. MIDI operator (`:`) plays the notes on channel 0 with velocity f, duration f
 
@@ -194,7 +194,7 @@ This example:
 The modular design allows for flexible combinations: use the arpeggiator with any scale/chord from the Scale operator, and route the output to any MIDI operator for complete control over timing, velocity, and duration.
 
 
-## Bouncer (`;`) (A rudimentary LFO interpretation)
+## Bouncer (`&`) (A rudimentary LFO interpretation)
 
 The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some steps are repeating to reflect the 'waveform' as precisely as possible, e.g: closer to peaks of a sine wave). Rate input skips every Nth step to make it "scan" through the waveform faster. For example, by default an sequence can last for 128 ticks (max resolution of waveorms), if you set it to 2, it skips every other step. It's almost like the higher the value, the faster the 'LFO Speed' is. By setting the Start and End value, you have control over the 'amplitude' of the waveform (like the 'amount' of the modulation).
 
@@ -202,7 +202,7 @@ The bouncer operator creates smooth transitions between two values using various
 
 | Start Value | End Value | Operator | Rate | Shape |
 |:------:|:------:|:--------:|:------:|:------:|
-|   A    |   B    |    ;     |   R    |   S    |
+|   A    |   B    |    &     |   R    |   S    |
 
 - `A`: Start value (0-z)
 - `B`: End value (0-z)
