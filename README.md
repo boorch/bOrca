@@ -18,50 +18,66 @@ I'll try to add new operators based on my needs. I'm not a professional programm
 - Using it through SSH on a Raspberry Pi Zero 2W, connected to an iPad Pro 11", outputting MIDI data via USB, acting as a MIDI Gadget
 - Using it on my uConsole terminal, paired to a CME WIDI Jack via Bluetooth, which is connected to the MIDI ports of a Torso S4.
 
-## Scale Operator (`^`):
-Outputs note and octave based on the provided root note, scale and degree.
+## Scale Operator (`^`) - Unified Scales and Chords:
+Outputs note and octave based on the provided root note, scale/chord type, and degree. The operator now supports a unified system with 62 total options: 10 essential scales (0-9), 26 chord root positions (a-z), and 26 chord first inversions (A-Z).
 
-| Operator | Octave | RootNote | Scale | Degree |
+| Operator | Octave | RootNote | Scale/Chord | Degree |
 |:------:|:--------:|:--------:|:-----:|:------:|
 |   ^    |    O     |    R     |   S   |   D    |
 
-Example:
-- ^3C02
-- Input '3': Octave 3 (optional)
-- Input 'C': Root note C
-- Input '0': Chromatic scale
-- Input '2': 3rd degree
-- Output: '3d' (D3)
+### Scale Examples (0-9):
+- `^3C02` - C Major scale, 3rd degree → outputs '3e' (E3)
+- `^.C12` - C Minor scale, 3rd degree → outputs 'eb' (Eb)
 
-Example without octave:
-- ^.C02
-- Input '.': No octave
-- Input 'C': Root note C
-- Input '0': Chromatic scale  
-- Input '2': 3rd degree
-- Output: 'd' (D)
+### Chord Examples (a-z = root position, A-Z = first inversion):
+- `^3Ca2` - C Major chord, 3rd note → outputs '3g' (G3)
+- `^3CA2` - C Major first inversion, 3rd note → outputs '4c' (C4)
 
+### Available Scales (0-9):
+| Value | Scale Type |
+|:-----:|------------|
+|   0   | Major Scale |
+|   1   | Minor Scale |
+|   2   | Dorian Scale |
+|   3   | Lydian Scale |
+|   4   | Mixolydian Scale |
+|   5   | Pentatonic Scale |
+|   6   | Hirajoshi Scale |
+|   7   | Iwato Scale |
+|   8   | Tetratonic Scale |
+|   9   | Fifths Scale |
 
-| Scale | Type |
-|:-----:|------|
-|   0   | Chromatic Scale |
-|   1   | Major Scale |
-|   2   | Minor Scale |
-|   3   | Dorian Scale |
-|   4   | Lydian Scale |
-|   5   | Mixolydian Scale |
-|   6   | Super Locrian Scale |
-|   7   | Hex Aeolian Scale |
-|   8   | Hex Dorian Scale |
-|   9   | Blues Scale |
-|   a   | Pentatonic Scale |
-|   b   | Hirajoshi Scale |
-|   c   | Kumoi Scale |
-|   d   | Iwato Scale |
-|   e   | Whole Tone Scale |
-|   f   | Pelog Scale |
-|   g   | Tetratonic Scale |
-|   h   | Fifths Scale |
+### Available Chords (a-z = root, A-Z = first inversion):
+| Value | Chord Type | Root Notes | First Inversion |
+|:-----:|------------|:----------:|:---------------:|
+|   a/A   | Major | C-E-G | E-G-C |
+|   b/B   | Minor | C-Eb-G | Eb-G-C |
+|   c/C   | Sus4 | C-F-G | F-G-C |
+|   d/D   | Sus2 | C-D-G | D-G-C |
+|   e/E   | Major7 | C-E-G-B | E-G-B-C |
+|   f/F   | Minor7 | C-Eb-G-Bb | Eb-G-Bb-C |
+|   g/G   | Dom7 | C-E-G-Bb | E-G-Bb-C |
+|   h/H   | Major6 | C-E-G-A | E-G-A-C |
+|   i/I   | Minor6 | C-Eb-G-A | Eb-G-A-C |
+|   j/J   | Dim | C-Eb-Gb | Eb-Gb-C |
+|   k/K   | Dim7 | C-Eb-Gb-A | Eb-Gb-A-C |
+|   l/L   | HalfDim7 | C-Eb-Gb-Bb | Eb-Gb-Bb-C |
+|   m/M   | Aug | C-E-G# | E-G#-C |
+|   n/N   | Aug7 | C-E-G#-Bb | E-G#-Bb-C |
+|   o/O   | Major9 | C-E-G-B-D | E-G-B-D-C |
+|   p/P   | Minor9 | C-Eb-G-Bb-D | Eb-G-Bb-D-C |
+|   q/Q   | Dom9 | C-E-G-Bb-D | E-G-Bb-D-C |
+|   r/R   | Major11 | C-E-G-B-D-F | E-G-B-D-F-C |
+|   s/S   | Minor11 | C-Eb-G-Bb-D-F | Eb-G-Bb-D-F-C |
+|   t/T   | Major13 | C-E-G-B-D-F-A | E-G-B-D-F-A-C |
+|   u/U   | Minor13 | C-Eb-G-Bb-D-F-A | Eb-G-Bb-D-F-A-C |
+|   v/V   | Dom7b9 | C-E-G-Bb-Db | E-G-Bb-Db-C |
+|   w/W   | Dom7#9 | C-E-G-Bb-D# | E-G-Bb-D#-C |
+|   x/X   | Major7#11 | C-E-G-B-F# | E-G-B-F#-C |
+|   y/Y   | Minor7b5 | C-Eb-Gb-Bb | Eb-Gb-Bb-C |
+|   z/Z   | MinorMaj7 | C-Eb-G-B | Eb-G-B-C |
+
+This unified system allows the Scale operator to access both traditional scales for melodic work and a comprehensive chord library for harmonic progressions, with intuitive case-sensitive first inversion support.
 
 
 ## Midipoly Operator (`|`):
@@ -84,52 +100,19 @@ Example 3:
 - Plays C3 C4 C5
 
 ## Midichord Operator (`=`)
-The Midichord operator outputs MIDI notes to form common chord types based on a root note. It supports various chord types from basic triads to extended chords, including jazz voicings, making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
+The Midichord operator outputs MIDI notes to form chord types using the same unified system as the Scale operator. It supports chord root positions (a-z) and first inversions (A-Z), making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
 
 | Operator | Channel | Octave | Root Note | Chord Type | Velocity | Duration |
 |:--------:|:-------:|:------:|:---------:|:----------:|:--------:|:--------:|
 |    =     |    C    |   O    |     R     |     T      |    V     |    D     |
 
-### Example
-- `=13C1ff`
-- Plays C major chord (C-E-G) on channel 1, octave 3, full velocity and duration
+### Examples
+- `=13Caff` - Plays C major chord (C-E-G) on channel 1, octave 3
+- `=13CAff` - Plays C major first inversion (E-G-C) on channel 1, octave 3  
+- `=13Cbff` - Plays C minor chord (C-Eb-G) on channel 1, octave 3
 
 ### Available Chord Types
-
-| Value | Chord Type |
-|:-----:|------------|
-| 0 | Minor |
-| 1 | Major |
-| 2 | Minor 7 |
-| 3 | Major 7 |
-| 4 | Minor 9 |
-| 5 | Major 9 |
-| 6 | Dominant 7 |
-| 7 | Minor 6 |
-| 8 | Major 6 |
-| 9 | Sus2 |
-| a | Sus4 |
-| b | Minor add9 |
-| c | Major add9 |
-| d | Augmented |
-| e | Augmented 7 |
-| f | Minor Major 7 |
-| g | Diminished |
-| h | Diminished 7 |
-| i | Half Diminished |
-| j | Minor 6/9 |
-| k | Major 6/9 |
-| l | Minor First Inversion |
-| m | Major First Inversion |
-| n | Minor Second Inversion |
-| o | Major Second Inversion |
-| p | Minor 7b5 |
-| q | Minor 11 |
-| r | Dominant 9 |
-| s | Dominant 7b9 |
-| t | Dominant 7#9 |
-| u | Major 7#11 |
-| v | Minor add11 |
+The Midichord operator uses the same chord definitions as the Scale operator (a-z for root positions, A-Z for first inversions). See the Scale Operator section above for the complete chord reference table.
 
 ## Random Operators (`R` and `r`):
 The `R` operator (uppercase) provides pure random generation that runs every tick. The `r` operator (lowercase) requires bang and uses a shuffle-based algorithm to avoid producing identical outputs on consecutive bangs in a creative manner.
@@ -150,7 +133,7 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 | Channel       | MIDI channel for output.                                  |
 | Base Octave   | Starting octave for the first note in the pattern.        |
 | Root Note     | The root note that defines the key of the arpeggio.       |
-| Scale Type    | Scale type index (0-h) to determine note intervals.       |
+| Scale Type    | Scale/chord type index (0-9 for scales, a-z/A-Z for chords). |
 | Velocity      | MIDI velocity of the played notes.                        |
 | Duration      | Length of each note in the sequence.                      |
 
@@ -166,13 +149,13 @@ The MIDI Arpeggiator operator (`&`) is designed to generate arpeggiated sequence
 - `C`: MIDI channel (0-F)
 - `O`: Base octave for the root note
 - `R`: Root note (like C, c, D, etc.)
-- `S`: Scale type (0-h matching the Scale Operator scale options)
+- `S`: Scale type (0-9 for scales, a-z/A-Z for chords - matching the Scale Operator options)
 - `V`: Velocity
 - `D`: Duration
 
 ### Example
 
-- `011&04C0f3`: This example uses arpeggio pattern `0`, plays the second note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, chromatic scale `0`, velocity `f`, and duration `3`.
+- `011&04C0f3`: This example uses arpeggio pattern `0`, plays the second note in the pattern, spans across 1 octave, on channel `0`, starting from octave `4`, with root note `C`, Major scale `0`, velocity `f`, and duration `3`.
 
 This operator generates a MIDI arpeggiated sequence based on the input parameters, allowing for intricate rhythmic patterns to be easily created and manipulated live. Adjust the `Arp Pattern`, `Note to Play`, and `Octave Range` to explore different musical ideas.
 
