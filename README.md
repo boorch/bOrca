@@ -82,7 +82,7 @@ Example 3:
 - Plays C3 C4 C5
 
 ## Midichord Operator (`=`)
-The Midichord operator outputs MIDI notes to form common chord types based on a root note. It supports various chord types from basic triads to extended chords, including jazz voicings, making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I neve ruse it)
+The Midichord operator outputs MIDI notes to form common chord types based on a root note. It supports various chord types from basic triads to extended chords, including jazz voicings, making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
 
 | Operator | Channel | Octave | Root Note | Chord Type | Velocity | Duration |
 |:--------:|:-------:|:------:|:---------:|:----------:|:--------:|:--------:|
