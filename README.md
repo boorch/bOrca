@@ -162,15 +162,19 @@ The operator reduces complexity by requiring only 2 inputs (pattern and range) w
 ### Example
 
 ```
-D8;21.....$3Ca0.:03.ff
-..1......0.....0......
+.............
+.......D2....
+........;12..
+....$3C03....
+.:03Fa8......
+.............
 ```
 
 This example:
-1. Delay (`D`) with value 8 bangs the arpeggiator every 8 ticks
-2. Arpeggiator (`;`) uses range 2, pattern 1 (descending) 
-3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale, degree 0
-4. MIDI operator (`:`) plays the notes on channel 0 with velocity 3, duration f
+1. Delay (`D`) with value 2 bangs the arpeggiator every 2 ticks
+2. Arpeggiator (`;`) uses range 1, pattern 2 (Up-Down) 
+3. Scale operator (`$`) converts degrees to notes using octave 3, C major scale, degree received from Arpeggiator
+4. MIDI operator (`:`) plays the notes on channel 0 with velocity a, duration 8
 
 ### Arpeggio Patterns
 
