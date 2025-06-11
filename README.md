@@ -231,7 +231,7 @@ The bouncer operator creates smooth transitions between two values using various
 Output value cycles through the chosen waveform pattern between start and end values at the specified rate. Perfect for creating LFO-like modulations or smooth parameter changes.
 
 ## MIDI CC Operator (`!`) (Refactored)
-The MIDI CC operator sends MIDI Control Change messages with optional interpolation between values. The control number is specified in hexadecimal (00-FF) using two inputs for high and low nibbles. There's also a "Lerp" input, which compensates a little bit for ORCA's low resolution (base36) output, which "sort of" makes changes slightly smoother. (e.g: when combined witn the Bouncer operator, it can act as a rudimentary LFO for controlling parameters on your synth)
+The MIDI CC operator sends MIDI Control Change messages with optional interpolation between values. The control number is specified in hexadecimal (00-FF) using two inputs for high and low nibbles. There's also a "Lerp" input, which compensates a little bit for ORCA's low resolution (base36) output, letting value changes happen slightly smoother. (e.g: when combined witn the Bouncer operator, it can act as a rudimentary LFO for controlling parameters on your synth)
 
 ### Inputs
 
