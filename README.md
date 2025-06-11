@@ -197,7 +197,7 @@ To use a pattern, select its index as the `Arp Pattern` input for the MIDI Arpeg
 
 ## Bouncer (`;`) (A rudimentary LFO interpretation)
 
-The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some repeating so not super precise), Rate input basically skips every Nth step to make it "scan" through the waveform faster. (e.g: 2 skips every other step, 5 skip every 4 step etc).
+The bouncer operator creates smooth transitions between two values using various waveform patterns. Useful for creating continuous value changes and modulations. Each waveform has a resolution of 128 steps (some steps are repeating to reflect the 'waveform' as precisely as possible, e.g: closer to peaks of a sine wave). Rate input skips every Nth step to make it "scan" through the waveform faster. For example, by default an sequence can last for 128 ticks (max resolution of waveorms), if you set it to 2, it skips every other step. It's almost like the higher the value, the faster the 'LFO Speed' is. By setting the Start and End value, you have control over the 'amplitude' of the waveform (like the 'amount' of the modulation).
 
 ### Inputs
 
