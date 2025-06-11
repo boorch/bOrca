@@ -82,25 +82,6 @@ Outputs note and octave based on the provided root note, scale/chord type, and d
 This unified system allows the Scale operator to access both traditional scales for melodic work and a comprehensive chord library for harmonic progressions, with intuitive case-sensitive first inversion support.
 
 
-## Midipoly Operator (`|`):
-Extension of Midi operator with 3 input notes. The first note processed is always considered the root note. Every following note is assumed to be "higher" than the previous one. (So no chord inversions sorry)
-
-| Midipoly | Channel | Octave | Note 1 | Note 2 | Note 3 | Velocity | Duration |
-|:---------:|:-------:|:------:|:------:|:------:|:------:|:--------:|:--------:|
-|     \|     |    C    |    O   |   N1   |   N2   |   N3   |    V     |    D     |
-
-Example 1:
-- |03CEGff
-- Plays C3 E3 G3
-
-Example 2:
-- |03GECff
-- Plays G3 E3 C4
-
-Example 3:
-- |03CCCff
-- Plays C3 C4 C5
-
 ## Midichord Operator (`=`)
 The Midichord operator outputs MIDI notes to form chord types using the unified system. It supports enriched chords (0-9), chord root positions (a-z) and first inversions (A-Z), making it useful for harmonic progressions and complex chord sequences. (This replaces OSC operator, as I never use it)
 

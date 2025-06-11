@@ -89,16 +89,14 @@ static Glyph_class glyph_class_of(Glyph glyph) {
   case '=':
   case '%':
   case '?':
-  case '|':
-  case '$':
   case '&':
     return Glyph_class_lowercase;
+  case '$':
+    return Glyph_class_uppercase;
   case '*':
     return Glyph_class_bang;
   case '#':
     return Glyph_class_comment;
-  case '^':
-    return Glyph_class_uppercase;
   }
   if (glyph >= 'A' && glyph <= 'Z')
     return Glyph_class_uppercase;
@@ -2280,8 +2278,6 @@ static void push_opers_guide_msg(void) {
       {'=', "midichord", "Sends preset chords over MIDI."},
       // {';', "udp", "Sends UDP message."},
       {';', "arpeggiator", "Outputs degree numbers for Scale operator."},
-      {'^', "", ""},
-      {'|', "midipoly", "Sends up to 3 MIDI notes."},
       {'&', "bouncer", "A rudimentary LFO-like operator."}
       };
   int w_desc = 0;

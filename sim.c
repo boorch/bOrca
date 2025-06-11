@@ -176,7 +176,6 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   _(';', arpeggiator)                                                          \
   _('=', midichord)                                                            \
   _('?', midipb)                                                               \
-  _('|', midipoly)                                                             \
   _('&', bouncer)
 
 #define ALPHA_OPERATORS(_)                                                     \
@@ -1301,68 +1300,6 @@ BEGIN_OPERATOR(midichord)
     oe->channel = (U8)channel;
     oe->octave = final_octave;
     oe->note = final_note;
-    oe->velocity = velocity;
-    oe->duration = (U8)(index_of(length_g) & 0x7Fu);
-    oe->mono = 0;
-  }
-
-END_OPERATOR
-
-//BOORCH's new Midipoly OP
-BEGIN_OPERATOR(midipoly)
-  for (Usz i = 1; i < 8; ++i) {
-    PORT(0, (Isz)i, IN);
-  }
-  PORT(0, 0, OUT); // Mark output immediately
-  STOP_IF_NOT_BANGED;
-  Glyph channel_g = PEEK(0, 1);
-  Glyph octave_g = PEEK(0, 2);
-  Glyph note_gs[3] = {PEEK(0, 3), PEEK(0, 4), PEEK(0, 5)};
-  Glyph velocity_g = PEEK(0, 6);
-  Glyph length_g = PEEK(0, 7);
-
-  Usz channel = index_of(channel_g);
-  int base_octave =
-      (int)index_of(octave_g); // Explicitly cast for safe addition
-
-  if (channel > 15)
-    return;
-
-  int last_note_absolute =
-      -1; // Store the absolute midi note number of the last note
-
-  for (int i = 0; i < 3; i++) {
-    U8 note_num = midi_note_number_of(note_gs[i]);
-    if (note_num == UINT8_MAX)
-      continue; // Skip invalid notes
-
-    int note_absolute =
-        base_octave * 12 + note_num; // Calculate the absolute midi note number
-    if (note_absolute <= last_note_absolute) {
-      // Ensure each note is higher than the previous
-      base_octave = (last_note_absolute / 12) + 1;
-    }
-    last_note_absolute =
-        base_octave * 12 + note_num; // Update for the next iteration
-
-    if (base_octave > 9)
-      continue; // Skip notes with octaves out of MIDI bounds
-
-    U8 velocity =
-        (velocity_g == '.' ? 127 : (U8)(index_of(velocity_g) * 127 / 35));
-
-    // if (velocity == 0)
-    //   return;
-
-    if (velocity > 127)
-      velocity = 127;
-
-    Oevent_midi_note *oe =
-        (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
-    oe->oevent_type = Oevent_type_midi_note;
-    oe->channel = (U8)channel;
-    oe->octave = (U8)base_octave;
-    oe->note = note_num;
     oe->velocity = velocity;
     oe->duration = (U8)(index_of(length_g) & 0x7Fu);
     oe->mono = 0;
