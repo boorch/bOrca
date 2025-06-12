@@ -449,9 +449,10 @@ END_OPERATOR
 // END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
-  for (Usz i = 1; i < 5; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
-  }
+  PORT(0, 1, IN | PARAM, "Channel");
+  PORT(0, 2, IN | PARAM, "Control (tens)");
+  PORT(0, 3, IN | PARAM, "Control (ones)");
+  PORT(0, 4, IN | PARAM, "Value");
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph control_a = PEEK(0, 2);
@@ -464,7 +465,7 @@ BEGIN_OPERATOR(midicc)
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  PORT(0, 0, OUT);
+  PORT(0, 0, OUT, "");
   Oevent_midi_cc *oe =
       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_cc;
@@ -493,9 +494,11 @@ BEGIN_OPERATOR(bang)
 END_OPERATOR
 
 BEGIN_OPERATOR(midi)
-  for (Usz i = 1; i < 6; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
-  }
+  PORT(0, 1, IN | PARAM, "Channel");
+  PORT(0, 2, IN | PARAM, "Octave");
+  PORT(0, 3, IN | PARAM, "Note");
+  PORT(0, 4, IN | PARAM, "Velocity");
+  PORT(0, 5, IN | PARAM, "Length");
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph octave_g = PEEK(0, 2);
@@ -524,7 +527,7 @@ BEGIN_OPERATOR(midi)
     if (vel_num > 127)
       vel_num = 127;
   }
-  PORT(0, 0, OUT);
+  PORT(0, 0, OUT, "");
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
@@ -596,10 +599,10 @@ END_OPERATOR
 // Midichord operator implementation moved after unified system definition
 
 BEGIN_OPERATOR(midipb)
-  for (Usz i = 1; i < 4; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
-  }
-  PORT(0, 0, OUT); // Mark output immediately
+  PORT(0, 1, IN | PARAM, "Channel");
+  PORT(0, 2, IN | PARAM, "MSB");
+  PORT(0, 3, IN | PARAM, "LSB");
+  PORT(0, 0, OUT, ""); // Mark output immediately
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph msb_g = PEEK(0, 2);
@@ -619,9 +622,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(add)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Value A");
+  PORT(0, 1, IN, "Value B");
+  PORT(1, 0, OUT, "");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Glyph g = glyph_table[(index_of(a) + index_of(b)) % Glyphs_index_count];
@@ -630,9 +633,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(subtract)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Value A");
+  PORT(0, 1, IN, "Value B");
+  PORT(1, 0, OUT, "");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Isz val = (Isz)index_of(b) - (Isz)index_of(a);
@@ -643,9 +646,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(clock)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Rate");
+  PORT(0, 1, IN, "Modulo");
+  PORT(1, 0, OUT, "");
   Glyph b = PEEK(0, 1);
   Usz rate = index_of(PEEK(0, -1));
   Usz mod_num = index_of(b);
@@ -659,9 +662,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(delay)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Rate");
+  PORT(0, 1, IN, "Modulo");
+  PORT(1, 0, OUT, "");
   Usz rate = index_of(PEEK(0, -1));
   Usz mod_num = index_of(PEEK(0, 1));
   if (rate == 0)
@@ -674,9 +677,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(if)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Value A");
+  PORT(0, 1, IN, "Value B");
+  PORT(1, 0, OUT, "");
   Glyph g0 = PEEK(0, -1);
   Glyph g1 = PEEK(0, 1);
   POKE(1, 0, g0 == g1 ? '*' : '.');
@@ -687,12 +690,12 @@ BEGIN_OPERATOR(generator)
   Isz out_x = (Isz)index_of(PEEK(0, -3));
   Isz out_y = (Isz)index_of(PEEK(0, -2)) + 1;
   Isz len = (Isz)index_of(PEEK(0, -1));
-  PORT(0, -3, IN | PARAM); // x
-  PORT(0, -2, IN | PARAM); // y
-  PORT(0, -1, IN | PARAM); // len
+  PORT(0, -3, IN | PARAM, "X offset"); // x
+  PORT(0, -2, IN | PARAM, "Y offset"); // y
+  PORT(0, -1, IN | PARAM, "Length"); // len
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN | PARAM);
-    PORT(out_y, out_x + i, OUT | NONLOCKING);
+    PORT(0, i + 1, IN | PARAM, "Input");
+    PORT(out_y, out_x + i, OUT | NONLOCKING, "");
     Glyph g = PEEK(0, i + 1);
     POKE_STUNNED(out_y, out_x + i, g);
   }
@@ -700,14 +703,14 @@ END_OPERATOR
 
 BEGIN_OPERATOR(halt)
   LOWERCASE_REQUIRES_BANG;
-  PORT(1, 0, IN | PARAM);
+  PORT(1, 0, IN | PARAM, "Input");
 END_OPERATOR
 
 BEGIN_OPERATOR(increment)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, IN | OUT);
+  PORT(0, -1, IN | PARAM, "Rate");
+  PORT(0, 1, IN, "Max");
+  PORT(1, 0, IN | OUT, "");
   Glyph ga = PEEK(0, -1);
   Glyph gb = PEEK(0, 1);
   Usz rate = 1;
@@ -727,10 +730,10 @@ BEGIN_OPERATOR(jump)
   Glyph g = PEEK(-1, 0);
   if (g == This_oper_char)
     return;
-  PORT(-1, 0, IN);
+  PORT(-1, 0, IN, "Input");
   for (Isz i = 1; i <= 256; ++i) {
     if (PEEK(i, 0) != This_oper_char) {
-      PORT(i, 0, OUT);
+      PORT(i, 0, OUT, "");
       POKE(i, 0, g);
       break;
     }
@@ -745,14 +748,14 @@ BEGIN_OPERATOR(konkat)
   Isz len = (Isz)index_of(PEEK(0, -1));
   if (len == 0)
     len = 1;
-  PORT(0, -1, IN | PARAM);
+  PORT(0, -1, IN | PARAM, "Length");
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN | PARAM);
+    PORT(0, i + 1, IN | PARAM, "Variable");
     Glyph var = PEEK(0, i + 1);
     if (var != '.') {
       Usz var_idx = index_of(var);
       Glyph result = extra_params->vars_slots[var_idx];
-      PORT(1, i + 1, OUT);
+      PORT(1, i + 1, OUT, "");
       POKE(1, i + 1, result);
     }
   }
@@ -760,9 +763,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(lesser)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Value A");
+  PORT(0, 1, IN, "Value B");
+  PORT(1, 0, OUT, "");
   Glyph ga = PEEK(0, -1);
   Glyph gb = PEEK(0, 1);
   if (ga == '.' || gb == '.') {
@@ -777,9 +780,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(multiply)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Factor A");
+  PORT(0, 1, IN, "Factor B");
+  PORT(1, 0, OUT, "");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Glyph g = glyph_table[(index_of(a) * index_of(b)) % Glyphs_index_count];
@@ -790,10 +793,10 @@ BEGIN_OPERATOR(offset)
   LOWERCASE_REQUIRES_BANG;
   Isz in_x = (Isz)index_of(PEEK(0, -2)) + 1;
   Isz in_y = (Isz)index_of(PEEK(0, -1));
-  PORT(0, -1, IN | PARAM);
-  PORT(0, -2, IN | PARAM);
-  PORT(in_y, in_x, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Y offset");
+  PORT(0, -2, IN | PARAM, "X offset");
+  PORT(in_y, in_x, IN, "Input");
+  PORT(1, 0, OUT, "");
   POKE(1, 0, PEEK(in_y, in_x));
 END_OPERATOR
 
@@ -801,16 +804,16 @@ BEGIN_OPERATOR(push)
   LOWERCASE_REQUIRES_BANG;
   Usz key = index_of(PEEK(0, -2));
   Usz len = index_of(PEEK(0, -1));
-  PORT(0, -1, IN | PARAM);
-  PORT(0, -2, IN | PARAM);
-  PORT(0, 1, IN);
+  PORT(0, -1, IN | PARAM, "Length");
+  PORT(0, -2, IN | PARAM, "Key");
+  PORT(0, 1, IN, "Input");
   if (len == 0)
     return;
   Isz out_x = (Isz)(key % len);
   for (Usz i = 0; i < len; ++i) {
     LOCK(1, (Isz)i);
   }
-  PORT(1, out_x, OUT);
+  PORT(1, out_x, OUT, "");
   POKE(1, out_x, PEEK(0, 1));
 END_OPERATOR
 
@@ -825,13 +828,13 @@ BEGIN_OPERATOR(query)
   Isz out_x = 1 - len;
 
   // Mark parameter ports in new order
-  PORT(0, -3, IN | PARAM); // len
-  PORT(0, -2, IN | PARAM); // y
-  PORT(0, -1, IN | PARAM); // x
+  PORT(0, -3, IN | PARAM, "Length"); // len
+  PORT(0, -2, IN | PARAM, "Y offset"); // y
+  PORT(0, -1, IN | PARAM, "X offset"); // x
 
   for (Isz i = 0; i < len; ++i) {
-    PORT(in_y, in_x + i, IN);
-    PORT(1, out_x + i, OUT);
+    PORT(in_y, in_x + i, IN, "Input");
+    PORT(1, out_x + i, OUT, "");
     Glyph g = PEEK(in_y, in_x + i);
     POKE(1, out_x + i, g);
   }
@@ -841,16 +844,16 @@ BEGIN_OPERATOR(track)
   LOWERCASE_REQUIRES_BANG;
   Usz key = index_of(PEEK(0, -2));
   Usz len = index_of(PEEK(0, -1));
-  PORT(0, -2, IN | PARAM);
-  PORT(0, -1, IN | PARAM);
+  PORT(0, -2, IN | PARAM, "Key");
+  PORT(0, -1, IN | PARAM, "Length");
   if (len == 0)
     return;
   Isz read_val_x = (Isz)(key % len) + 1;
   for (Usz i = 0; i < len; ++i) {
     LOCK(0, (Isz)(i + 1));
   }
-  PORT(0, (Isz)read_val_x, IN);
-  PORT(1, 0, OUT);
+  PORT(0, (Isz)read_val_x, IN, "Input");
+  PORT(1, 0, OUT, "");
   POKE(1, 0, PEEK(0, read_val_x));
 END_OPERATOR
 
@@ -858,9 +861,9 @@ END_OPERATOR
 // simplest-euclidean-rhythm-algorithm-explained/
 BEGIN_OPERATOR(uclid)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  PORT(0, -1, IN | PARAM, "Steps");
+  PORT(0, 1, IN, "Max");
+  PORT(1, 0, OUT, "");
   Glyph left = PEEK(0, -1);
   Usz steps = 1;
   if (left != '.' && left != '*')
@@ -875,8 +878,8 @@ END_OPERATOR
 
 BEGIN_OPERATOR(variable)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
+  PORT(0, -1, IN | PARAM, "Variable");
+  PORT(0, 1, IN, "Value");
   Glyph left = PEEK(0, -1);
   Glyph right = PEEK(0, 1);
   if (left != '.') {
@@ -885,7 +888,7 @@ BEGIN_OPERATOR(variable)
     extra_params->vars_slots[var_idx] = right;
   } else if (right != '.') {
     // Read
-    PORT(1, 0, OUT);
+    PORT(1, 0, OUT, "");
     Usz var_idx = index_of(right);
     Glyph result = extra_params->vars_slots[var_idx];
     POKE(1, 0, result);
@@ -907,13 +910,13 @@ BEGIN_OPERATOR(teleport)
     return;
 
   // Mark parameter inputs
-  PORT(0, -3, IN | PARAM); // Count
-  PORT(0, -2, IN | PARAM); // Y offset
-  PORT(0, -1, IN | PARAM); // X offset
+  PORT(0, -3, IN | PARAM, "Count"); // Count
+  PORT(0, -2, IN | PARAM, "Y offset"); // Y offset
+  PORT(0, -1, IN | PARAM, "X offset"); // X offset
 
   // Mark input ports for each input cell IMMEDIATELY to prevent them from executing
   for (Usz i = 0; i < count; ++i) {
-    PORT(0, (Isz)i + 1, IN | PARAM);
+    PORT(0, (Isz)i + 1, IN | PARAM, "Input");
   }
 
   // Get offsets
@@ -946,7 +949,7 @@ BEGIN_OPERATOR(teleport)
 
   // Write outputs
   for (Usz i = 0; i < count; ++i) {
-    PORT((Isz)out_y, (Isz)(out_x + i), OUT | NONLOCKING);
+    PORT((Isz)out_y, (Isz)(out_x + i), OUT | NONLOCKING, "");
     POKE_STUNNED((Isz)out_y, (Isz)(out_x + i), inputs[i]);
   }
 END_OPERATOR
@@ -956,10 +959,10 @@ BEGIN_OPERATOR(yump)
   Glyph g = PEEK(0, -1);
   if (g == This_oper_char)
     return;
-  PORT(0, -1, IN);
+  PORT(0, -1, IN, "Input");
   for (Isz i = 1; i <= 256; ++i) {
     if (PEEK(0, i) != This_oper_char) {
-      PORT(0, i, OUT);
+      PORT(0, i, OUT, "");
       POKE(0, i, g);
       break;
     }
@@ -969,9 +972,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(lerp)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, IN | OUT);
+  PORT(0, -1, IN | PARAM, "Rate");
+  PORT(0, 1, IN, "Target");
+  PORT(1, 0, IN | OUT, "");
   Glyph g = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Isz rate = g == '.' || g == '*' ? 1 : (Isz)index_of(g);
@@ -1102,12 +1105,12 @@ static Usz scale_chord_lengths[] = {
 };
 
 BEGIN_OPERATOR(scale)
-  PORT(0, 1, IN | PARAM);   // Octave input
-  PORT(0, 2, IN | PARAM);   // Root note (like C, c, D etc)
-  PORT(0, 3, IN | PARAM);   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
-  PORT(0, 4, IN | PARAM);   // Degree
-  PORT(1, -1, OUT); // Octave output
-  PORT(1, 0, OUT);  // Note output
+  PORT(0, 1, IN | PARAM, "Octave");   // Octave input
+  PORT(0, 2, IN | PARAM, "Root");   // Root note (like C, c, D etc)
+  PORT(0, 3, IN | PARAM, "Scale");   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
+  PORT(0, 4, IN | PARAM, "Degree");   // Degree
+  PORT(1, -1, OUT, ""); // Octave output
+  PORT(1, 0, OUT, "");  // Note output
 
   // Lock inputs
   LOCK(0, 1);
@@ -1212,10 +1215,13 @@ END_OPERATOR
 //BOORCH's MIDIChord operator (using unified scales_and_chords system)
 BEGIN_OPERATOR(midichord)
   // Check all required input ports
-  for (Usz i = 1; i < 7; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
-  }
-  PORT(0, 0, OUT); // Mark output immediately
+  PORT(0, 1, IN | PARAM, "Channel");
+  PORT(0, 2, IN | PARAM, "Octave");
+  PORT(0, 3, IN | PARAM, "Root note");
+  PORT(0, 4, IN | PARAM, "Chord type");
+  PORT(0, 5, IN | PARAM, "Velocity");
+  PORT(0, 6, IN | PARAM, "Length");
+  PORT(0, 0, OUT, ""); // Mark output immediately
   STOP_IF_NOT_BANGED;
 
   // Get chord type and validate range (supports a-z and A-Z)
@@ -1462,9 +1468,9 @@ static Usz get_arp_degree(ArpPatternType pattern, Usz step, Usz range,
 
 BEGIN_OPERATOR(arpeggiator)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, 1, IN | PARAM);  // Range (1-4)
-  PORT(0, 2, IN | PARAM);  // Pattern (0-9, a-d)
-  PORT(1, 0, OUT);         // Degree output
+  PORT(0, 1, IN | PARAM, "Range");  // Range (1-4)
+  PORT(0, 2, IN | PARAM, "Pattern");  // Pattern (0-9, a-d)
+  PORT(1, 0, OUT, "");         // Degree output
 
   // Calculate state index
   Usz state_idx = y * width + x;
@@ -1554,9 +1560,9 @@ BEGIN_OPERATOR(random)
   if (glyph_is_lowercase(This_oper_char)) {
     // Lowercase 'r' - requires bang and uses shuffle algorithm
     LOWERCASE_REQUIRES_BANG;
-    PORT(0, -1, IN | PARAM); // Min
-    PORT(0, 1, IN);          // Max
-    PORT(1, 0, OUT);         // Output
+    PORT(0, -1, IN | PARAM, "Min"); // Min
+    PORT(0, 1, IN, "Max");          // Max
+    PORT(1, 0, OUT, "");         // Output
 
     Glyph min_glyph = PEEK(0, -1);
     Glyph max_glyph = PEEK(0, 1);
@@ -1599,9 +1605,9 @@ BEGIN_OPERATOR(random)
     POKE(1, 0, glyph_of(result));
   } else {
     // Uppercase 'R' - pure random, evaluated every tick
-    PORT(0, -1, IN | PARAM);
-    PORT(0, 1, IN);
-    PORT(1, 0, OUT);
+    PORT(0, -1, IN | PARAM, "Min");
+    PORT(0, 1, IN, "Max");
+    PORT(1, 0, OUT, "");
     Glyph gb = PEEK(0, 1);
     Usz a = index_of(PEEK(0, -1));
     Usz b = index_of(gb);
@@ -1673,11 +1679,11 @@ typedef struct {
 static Bouncer_state bouncer_states[4096] = {0};
 
 BEGIN_OPERATOR(bouncer)
-  PORT(0, 1, IN | PARAM); // Start value (a)
-  PORT(0, 2, IN | PARAM); // End value (b)
-  PORT(0, 3, IN | PARAM); // Rate (ticks per cycle)
-  PORT(0, 4, IN | PARAM); // Shape (0-7 for different waveforms)
-  PORT(1, 0, OUT);
+  PORT(0, 1, IN | PARAM, "Start"); // Start value (a)
+  PORT(0, 2, IN | PARAM, "End"); // End value (b)
+  PORT(0, 3, IN | PARAM, "Rate"); // Rate (ticks per cycle)
+  PORT(0, 4, IN | PARAM, "Shape"); // Shape (0-7 for different waveforms)
+  PORT(1, 0, OUT, "");
 
   Glyph start_g = PEEK(0, 1);
   Glyph end_g = PEEK(0, 2);
