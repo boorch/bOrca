@@ -439,6 +439,23 @@ Enhanced_tooltip get_enhanced_tooltip_at_cursor(Glyph const *gbuffer, Mark const
               }
             }
             
+            // Check for MIDI CC value port enhancement
+            bool is_midicc_value_port = (op_char == '!' && rel_y == 0 && rel_x == 5);  // MIDI CC operator, value input
+            
+            // If it's a MIDI CC value port and has a non-empty value, enhance the tooltip
+            if (is_midicc_value_port && cursor_glyph != '.') {
+              static char value_text[16];
+              Usz value_index = index_of(cursor_glyph);
+              Usz midi_value = value_index * 4;
+              if (midi_value > 127) midi_value = 127;  // Clamp to MIDI CC range
+              snprintf(value_text, sizeof(value_text), "%d", (int)midi_value);
+              
+              result.line1 = "Value:";
+              result.line2 = value_text;
+              result.is_enhanced = true;
+              return result;
+            }
+            
             // Regular tooltip
             result.line1 = port->tooltip;
             result.line2 = NULL;

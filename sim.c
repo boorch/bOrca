@@ -483,7 +483,11 @@ BEGIN_OPERATOR(midicc)
   oe->oevent_type = Oevent_type_midi_cc;
   oe->channel = (U8)channel;
   oe->control = (U8)control_num;
-  oe->value = (U8)(index_of(value_g) * 127 / 35); // 0~35 → 0~127
+  // Map ORCA values (0-35) to MIDI CC values in increments of 4: 0→0, 1→4, 2→8, etc.
+  Usz value_index = index_of(value_g);
+  Usz midi_value = value_index * 4;
+  if (midi_value > 127) midi_value = 127; // Clamp to MIDI CC range
+  oe->value = (U8)midi_value;
 END_OPERATOR
 
 BEGIN_OPERATOR(comment)

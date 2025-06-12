@@ -232,13 +232,20 @@ The MIDI CC operator sends MIDI Control Change messages. The control number is s
 - `Ch`: Hundreds digit of control number (0-9) or `.` to omit
 - `Ct`: Tens digit of control number (0-9) or `.` to omit  
 - `Co`: Ones digit of control number (0-9) or `.` to omit
-- `V`: Control value (0-z maps to 0-127)
+- `V`: Control value (0-z) - maps to MIDI CC values in increments of 4
+
+### Common MIDI CC Values
+- `0` → 0 (minimum)
+- `8` → 32 (25% intensity)
+- `g` → 64 (50% intensity, center)  
+- `o` → 96 (75% intensity)
+- `w` → 127 (maximum)
 
 ### Examples
 
-- `!3..7a` - Sends MIDI CC #7 (volume) on channel 3 with value `a` (28)
-- `!31274` - Sends MIDI CC #127 (highest CC) on channel 3 with value `4` (14)
-- `!3.49z` - Sends MIDI CC #49 on channel 3 with value `z` (127)
-- `!300.g` - Sends MIDI CC #0 on channel 3 with value `g` (56)
+- `!3..70` - Sends MIDI CC #7 (volume) on channel 3 with value 0 (silent)
+- `!3..7g` - Sends MIDI CC #7 (volume) on channel 3 with value 64 (half volume)
+- `!3..7w` - Sends MIDI CC #7 (volume) on channel 3 with value 127 (full volume)
+- `!3.01o` - Sends MIDI CC #1 (mod wheel) on channel 3 with value 96
 
-The operator automatically clamps control numbers above 127 to 127 to ensure valid MIDI CC range.
+The operator automatically clamps control numbers above 127 to 127 to ensure valid MIDI CC range. Values use increments of 4 for predictable and musical MIDI CC values.
