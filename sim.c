@@ -450,7 +450,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
   for (Usz i = 1; i < 5; ++i) {
-    PORT(0, (Isz)i, IN | PARAM, "Channel/CC/Value");
+    PORT(0, (Isz)i, IN | PARAM);
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -464,7 +464,7 @@ BEGIN_OPERATOR(midicc)
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  PORT(0, 0, OUT, "Output");
+  PORT(0, 0, OUT);
   Oevent_midi_cc *oe =
       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_cc;
@@ -494,7 +494,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
-    PORT(0, (Isz)i, IN | PARAM, "Channel/Octave/Note/Velocity/Length");
+    PORT(0, (Isz)i, IN | PARAM);
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -524,7 +524,7 @@ BEGIN_OPERATOR(midi)
     if (vel_num > 127)
       vel_num = 127;
   }
-  PORT(0, 0, OUT, "Output");
+  PORT(0, 0, OUT);
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
