@@ -93,7 +93,11 @@ typedef struct {
   Glyph *vars_slots;
   Oevent_list *oevent_list;
   Usz random_seed;
+  Port_info *port_names;     // Array to store port name info
+  Usz port_count;           // Current number of ports registered
 } Oper_extra_params;
+
+#define MAX_PORTS_PER_OPERATOR 32
 
 static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
                                Usz height, Usz width, Usz y, Usz x, Isz delta_y,
@@ -164,6 +168,27 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
 #define PORT(_delta_y, _delta_x, _flags)                                       \
   mbuffer_poke_relative_flags_or(mbuffer, height, width, y, x, _delta_y,       \
                                  _delta_x, (_flags) ^ Mark_flag_lock)
+
+// Macro to register port names during simulation
+#define PORT_NAME(_delta_y, _delta_x, _name) \
+  do { \
+    if (extra_params && extra_params->port_names) { \
+      Port_info *port_info = &extra_params->port_names[extra_params->port_count]; \
+      if (extra_params->port_count < MAX_PORTS_PER_OPERATOR) { \
+        port_info->delta_y = _delta_y; \
+        port_info->delta_x = _delta_x; \
+        port_info->name = _name; \
+        extra_params->port_count++; \
+      } \
+    } \
+  } while(0)
+
+#define NAMED_PORT(_delta_y, _delta_x, _flags, _name) \
+  do { \
+    PORT(_delta_y, _delta_x, _flags); \
+    PORT_NAME(_delta_y, _delta_x, _name); \
+  } while(0)
+
 //////// Operators
 
 #define UNIQUE_OPERATORS(_)                                                    \
@@ -447,7 +472,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
   for (Usz i = 1; i < 5; ++i) {
-    PORT(0, (Isz)i, IN);
+    NAMED_PORT(0, (Isz)i, IN, i == 1 ? "channel" : i == 2 ? "cc_high" : i == 3 ? "cc_low" : "value");
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -461,7 +486,7 @@ BEGIN_OPERATOR(midicc)
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  PORT(0, 0, OUT);
+  NAMED_PORT(0, 0, OUT, "midi_cc");
   Oevent_midi_cc *oe =
       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_cc;
@@ -491,7 +516,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
-    PORT(0, (Isz)i, IN);
+    NAMED_PORT(0, (Isz)i, IN, i == 1 ? "channel" : i == 2 ? "octave" : i == 3 ? "note" : i == 4 ? "velocity" : "duration");
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -521,7 +546,7 @@ BEGIN_OPERATOR(midi)
     if (vel_num > 127)
       vel_num = 127;
   }
-  PORT(0, 0, OUT);
+  NAMED_PORT(0, 0, OUT, "midi_note");
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
@@ -594,9 +619,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midipb)
   for (Usz i = 1; i < 4; ++i) {
-    PORT(0, (Isz)i, IN);
+    NAMED_PORT(0, (Isz)i, IN, i == 1 ? "channel" : i == 2 ? "msb" : "lsb");
   }
-  PORT(0, 0, OUT); // Mark output immediately
+  NAMED_PORT(0, 0, OUT, "midi_pb"); // Mark output immediately
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph msb_g = PEEK(0, 2);
@@ -616,9 +641,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(add)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "left");
+  NAMED_PORT(0, 1, IN, "right");
+  NAMED_PORT(1, 0, OUT, "sum");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Glyph g = glyph_table[(index_of(a) + index_of(b)) % Glyphs_index_count];
@@ -627,9 +652,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(subtract)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "minuend");
+  NAMED_PORT(0, 1, IN, "subtrahend");
+  NAMED_PORT(1, 0, OUT, "difference");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Isz val = (Isz)index_of(b) - (Isz)index_of(a);
@@ -640,9 +665,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(clock)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "rate");
+  NAMED_PORT(0, 1, IN, "mod");
+  NAMED_PORT(1, 0, OUT, "phase");
   Glyph b = PEEK(0, 1);
   Usz rate = index_of(PEEK(0, -1));
   Usz mod_num = index_of(b);
@@ -656,9 +681,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(delay)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "rate");
+  NAMED_PORT(0, 1, IN, "mod");
+  NAMED_PORT(1, 0, OUT, "bang");
   Usz rate = index_of(PEEK(0, -1));
   Usz mod_num = index_of(PEEK(0, 1));
   if (rate == 0)
@@ -671,9 +696,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(if)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "left");
+  NAMED_PORT(0, 1, IN, "right");
+  NAMED_PORT(1, 0, OUT, "result");
   Glyph g0 = PEEK(0, -1);
   Glyph g1 = PEEK(0, 1);
   POKE(1, 0, g0 == g1 ? '*' : '.');
@@ -684,12 +709,12 @@ BEGIN_OPERATOR(generator)
   Isz out_x = (Isz)index_of(PEEK(0, -3));
   Isz out_y = (Isz)index_of(PEEK(0, -2)) + 1;
   Isz len = (Isz)index_of(PEEK(0, -1));
-  PORT(0, -3, IN | PARAM); // x
-  PORT(0, -2, IN | PARAM); // y
-  PORT(0, -1, IN | PARAM); // len
+  NAMED_PORT(0, -3, IN | PARAM, "x_offset");
+  NAMED_PORT(0, -2, IN | PARAM, "y_offset");
+  NAMED_PORT(0, -1, IN | PARAM, "length");
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN);
-    PORT(out_y, out_x + i, OUT | NONLOCKING);
+    NAMED_PORT(0, i + 1, IN, i == 0 ? "value_1" : i == 1 ? "value_2" : i == 2 ? "value_3" : "value_n");
+    NAMED_PORT(out_y, out_x + i, OUT | NONLOCKING, "output");
     Glyph g = PEEK(0, i + 1);
     POKE_STUNNED(out_y, out_x + i, g);
   }
@@ -697,14 +722,15 @@ END_OPERATOR
 
 BEGIN_OPERATOR(halt)
   LOWERCASE_REQUIRES_BANG;
-  PORT(1, 0, IN | PARAM);
+  NAMED_PORT(1, 0, OUT, "halt");
+  POKE(1, 0, '.');
 END_OPERATOR
 
 BEGIN_OPERATOR(increment)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, IN | OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "rate");
+  NAMED_PORT(0, 1, IN, "max");
+  NAMED_PORT(1, 0, IN | OUT, "value");
   Glyph ga = PEEK(0, -1);
   Glyph gb = PEEK(0, 1);
   Usz rate = 1;
@@ -724,10 +750,10 @@ BEGIN_OPERATOR(jump)
   Glyph g = PEEK(-1, 0);
   if (g == This_oper_char)
     return;
-  PORT(-1, 0, IN);
+  NAMED_PORT(-1, 0, IN, "input");
   for (Isz i = 1; i <= 256; ++i) {
     if (PEEK(i, 0) != This_oper_char) {
-      PORT(i, 0, OUT);
+      NAMED_PORT(i, 0, OUT, "output");
       POKE(i, 0, g);
       break;
     }
@@ -742,14 +768,14 @@ BEGIN_OPERATOR(konkat)
   Isz len = (Isz)index_of(PEEK(0, -1));
   if (len == 0)
     len = 1;
-  PORT(0, -1, IN | PARAM);
+  NAMED_PORT(0, -1, IN | PARAM, "length");
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN);
+    NAMED_PORT(0, i + 1, IN, i == 0 ? "var_1" : i == 1 ? "var_2" : i == 2 ? "var_3" : "var_n");
     Glyph var = PEEK(0, i + 1);
     if (var != '.') {
       Usz var_idx = index_of(var);
       Glyph result = extra_params->vars_slots[var_idx];
-      PORT(1, i + 1, OUT);
+      NAMED_PORT(1, i + 1, OUT, i == 0 ? "value_1" : i == 1 ? "value_2" : i == 2 ? "value_3" : "value_n");
       POKE(1, i + 1, result);
     }
   }
@@ -757,9 +783,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(lesser)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "left");
+  NAMED_PORT(0, 1, IN, "right");
+  NAMED_PORT(1, 0, OUT, "minimum");
   Glyph ga = PEEK(0, -1);
   Glyph gb = PEEK(0, 1);
   if (ga == '.' || gb == '.') {
@@ -774,9 +800,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(multiply)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "left");
+  NAMED_PORT(0, 1, IN, "right");
+  NAMED_PORT(1, 0, OUT, "product");
   Glyph a = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Glyph g = glyph_table[(index_of(a) * index_of(b)) % Glyphs_index_count];
@@ -787,10 +813,10 @@ BEGIN_OPERATOR(offset)
   LOWERCASE_REQUIRES_BANG;
   Isz in_x = (Isz)index_of(PEEK(0, -2)) + 1;
   Isz in_y = (Isz)index_of(PEEK(0, -1));
-  PORT(0, -1, IN | PARAM);
-  PORT(0, -2, IN | PARAM);
-  PORT(in_y, in_x, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -2, IN | PARAM, "x_offset");
+  NAMED_PORT(0, -1, IN | PARAM, "y_offset");
+  NAMED_PORT(in_y, in_x, IN, "input");
+  NAMED_PORT(1, 0, OUT, "value");
   POKE(1, 0, PEEK(in_y, in_x));
 END_OPERATOR
 
@@ -798,16 +824,16 @@ BEGIN_OPERATOR(push)
   LOWERCASE_REQUIRES_BANG;
   Usz key = index_of(PEEK(0, -2));
   Usz len = index_of(PEEK(0, -1));
-  PORT(0, -1, IN | PARAM);
-  PORT(0, -2, IN | PARAM);
-  PORT(0, 1, IN);
+  NAMED_PORT(0, -2, IN | PARAM, "key");
+  NAMED_PORT(0, -1, IN | PARAM, "length");
+  NAMED_PORT(0, 1, IN, "value");
   if (len == 0)
     return;
   Isz out_x = (Isz)(key % len);
   for (Usz i = 0; i < len; ++i) {
     LOCK(1, (Isz)i);
   }
-  PORT(1, out_x, OUT);
+  NAMED_PORT(1, out_x, OUT, "output");
   POKE(1, out_x, PEEK(0, 1));
 END_OPERATOR
 
@@ -822,13 +848,13 @@ BEGIN_OPERATOR(query)
   Isz out_x = 1 - len;
 
   // Mark parameter ports in new order
-  PORT(0, -3, IN | PARAM); // len
-  PORT(0, -2, IN | PARAM); // y
-  PORT(0, -1, IN | PARAM); // x
+  NAMED_PORT(0, -3, IN | PARAM, "length");
+  NAMED_PORT(0, -2, IN | PARAM, "y_offset");
+  NAMED_PORT(0, -1, IN | PARAM, "x_offset");
 
   for (Isz i = 0; i < len; ++i) {
-    PORT(in_y, in_x + i, IN);
-    PORT(1, out_x + i, OUT);
+    NAMED_PORT(in_y, in_x + i, IN, i == 0 ? "input_1" : i == 1 ? "input_2" : i == 2 ? "input_3" : "input_n");
+    NAMED_PORT(1, out_x + i, OUT, i == 0 ? "output_1" : i == 1 ? "output_2" : i == 2 ? "output_3" : "output_n");
     Glyph g = PEEK(in_y, in_x + i);
     POKE(1, out_x + i, g);
   }
@@ -838,16 +864,16 @@ BEGIN_OPERATOR(track)
   LOWERCASE_REQUIRES_BANG;
   Usz key = index_of(PEEK(0, -2));
   Usz len = index_of(PEEK(0, -1));
-  PORT(0, -2, IN | PARAM);
-  PORT(0, -1, IN | PARAM);
+  NAMED_PORT(0, -2, IN | PARAM, "key");
+  NAMED_PORT(0, -1, IN | PARAM, "length");
   if (len == 0)
     return;
   Isz read_val_x = (Isz)(key % len) + 1;
   for (Usz i = 0; i < len; ++i) {
     LOCK(0, (Isz)(i + 1));
   }
-  PORT(0, (Isz)read_val_x, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, (Isz)read_val_x, IN, "input");
+  NAMED_PORT(1, 0, OUT, "value");
   POKE(1, 0, PEEK(0, read_val_x));
 END_OPERATOR
 
@@ -855,9 +881,9 @@ END_OPERATOR
 // simplest-euclidean-rhythm-algorithm-explained/
 BEGIN_OPERATOR(uclid)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "steps");
+  NAMED_PORT(0, 1, IN, "max");
+  NAMED_PORT(1, 0, OUT, "beat");
   Glyph left = PEEK(0, -1);
   Usz steps = 1;
   if (left != '.' && left != '*')
@@ -872,8 +898,8 @@ END_OPERATOR
 
 BEGIN_OPERATOR(variable)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
+  NAMED_PORT(0, -1, IN | PARAM, "write_var");
+  NAMED_PORT(0, 1, IN, "read_var_or_value");
   Glyph left = PEEK(0, -1);
   Glyph right = PEEK(0, 1);
   if (left != '.') {
@@ -882,7 +908,7 @@ BEGIN_OPERATOR(variable)
     extra_params->vars_slots[var_idx] = right;
   } else if (right != '.') {
     // Read
-    PORT(1, 0, OUT);
+    NAMED_PORT(1, 0, OUT, "value");
     Usz var_idx = index_of(right);
     Glyph result = extra_params->vars_slots[var_idx];
     POKE(1, 0, result);
@@ -904,9 +930,9 @@ BEGIN_OPERATOR(teleport)
     return;
 
   // Mark parameter inputs
-  PORT(0, -3, IN | PARAM); // Count
-  PORT(0, -2, IN | PARAM); // Y offset
-  PORT(0, -1, IN | PARAM); // X offset
+  NAMED_PORT(0, -3, IN | PARAM, "length");
+  NAMED_PORT(0, -2, IN | PARAM, "y_offset");
+  NAMED_PORT(0, -1, IN | PARAM, "x_offset");
 
   // Get offsets
   Glyph out_y_g = PEEK(0, -2);
@@ -930,9 +956,9 @@ BEGIN_OPERATOR(teleport)
   if (out_y == 0 && out_x <= count)
     return;
 
-  // Mark input ports for each input cell
+  // Mark input ports for each input cell (cells to the right of operator)
   for (Usz i = 0; i < count; ++i) {
-    PORT(0, (Isz)i + 1, IN);
+    NAMED_PORT(0, (Isz)i + 1, IN, i == 0 ? "value_1" : i == 1 ? "value_2" : i == 2 ? "value_3" : "value_n");
   }
 
   // Lock and read inputs
@@ -941,9 +967,9 @@ BEGIN_OPERATOR(teleport)
     inputs[i] = PEEK(0, (Isz)i + 1);
   }
 
-  // Write outputs
+  // Mark output ports and write outputs
   for (Usz i = 0; i < count; ++i) {
-    PORT((Isz)out_y, (Isz)(out_x + i), OUT | NONLOCKING);
+    NAMED_PORT((Isz)out_y, (Isz)(out_x + i), OUT | NONLOCKING, i == 0 ? "output_1" : i == 1 ? "output_2" : i == 2 ? "output_3" : "output_n");
     POKE_STUNNED((Isz)out_y, (Isz)(out_x + i), inputs[i]);
   }
 END_OPERATOR
@@ -953,10 +979,10 @@ BEGIN_OPERATOR(yump)
   Glyph g = PEEK(0, -1);
   if (g == This_oper_char)
     return;
-  PORT(0, -1, IN);
+  NAMED_PORT(0, -1, IN, "input");
   for (Isz i = 1; i <= 256; ++i) {
     if (PEEK(0, i) != This_oper_char) {
-      PORT(0, i, OUT);
+      NAMED_PORT(0, i, OUT, "output");
       POKE(0, i, g);
       break;
     }
@@ -966,9 +992,9 @@ END_OPERATOR
 
 BEGIN_OPERATOR(lerp)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, -1, IN | PARAM);
-  PORT(0, 1, IN);
-  PORT(1, 0, IN | OUT);
+  NAMED_PORT(0, -1, IN | PARAM, "rate");
+  NAMED_PORT(0, 1, IN, "target");
+  NAMED_PORT(1, 0, IN | OUT, "value");
   Glyph g = PEEK(0, -1);
   Glyph b = PEEK(0, 1);
   Isz rate = g == '.' || g == '*' ? 1 : (Isz)index_of(g);
@@ -1099,12 +1125,12 @@ static Usz scale_chord_lengths[] = {
 };
 
 BEGIN_OPERATOR(scale)
-  PORT(0, 1, IN);   // Octave input
-  PORT(0, 2, IN);   // Root note (like C, c, D etc)
-  PORT(0, 3, IN);   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
-  PORT(0, 4, IN);   // Degree
-  PORT(1, -1, OUT); // Octave output
-  PORT(1, 0, OUT);  // Note output
+  NAMED_PORT(0, 1, IN, "octave");   // Octave input
+  NAMED_PORT(0, 2, IN, "root");   // Root note (like C, c, D etc)
+  NAMED_PORT(0, 3, IN, "scale");   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
+  NAMED_PORT(0, 4, IN, "degree");   // Degree
+  NAMED_PORT(1, -1, OUT, "octave_out"); // Octave output
+  NAMED_PORT(1, 0, OUT, "note_out");  // Note output
 
   // Lock inputs
   LOCK(0, 1);
@@ -1210,9 +1236,9 @@ END_OPERATOR
 BEGIN_OPERATOR(midichord)
   // Check all required input ports
   for (Usz i = 1; i < 7; ++i) {
-    PORT(0, (Isz)i, IN);
+    NAMED_PORT(0, (Isz)i, IN, i == 1 ? "channel" : i == 2 ? "octave" : i == 3 ? "root" : i == 4 ? "chord" : i == 5 ? "velocity" : "duration");
   }
-  PORT(0, 0, OUT); // Mark output immediately
+  NAMED_PORT(0, 0, OUT, "midi_chord"); // Mark output immediately
   STOP_IF_NOT_BANGED;
 
   // Get chord type and validate range (supports a-z and A-Z)
@@ -1459,9 +1485,9 @@ static Usz get_arp_degree(ArpPatternType pattern, Usz step, Usz range,
 
 BEGIN_OPERATOR(arpeggiator)
   LOWERCASE_REQUIRES_BANG;
-  PORT(0, 1, IN | PARAM);  // Range (1-4)
-  PORT(0, 2, IN | PARAM);  // Pattern (0-9, a-d)
-  PORT(1, 0, OUT);         // Degree output
+  NAMED_PORT(0, 1, IN | PARAM, "range");  // Range (1-4)
+  NAMED_PORT(0, 2, IN | PARAM, "pattern");  // Pattern (0-9, a-d)
+  NAMED_PORT(1, 0, OUT, "degree");         // Degree output
 
   // Calculate state index
   Usz state_idx = y * width + x;
@@ -1551,9 +1577,9 @@ BEGIN_OPERATOR(random)
   if (glyph_is_lowercase(This_oper_char)) {
     // Lowercase 'r' - requires bang and uses shuffle algorithm
     LOWERCASE_REQUIRES_BANG;
-    PORT(0, -1, IN | PARAM); // Min
-    PORT(0, 1, IN);          // Max
-    PORT(1, 0, OUT);         // Output
+    NAMED_PORT(0, -1, IN | PARAM, "min"); // Min
+    NAMED_PORT(0, 1, IN, "max");          // Max
+    NAMED_PORT(1, 0, OUT, "value");         // Output
 
     Glyph min_glyph = PEEK(0, -1);
     Glyph max_glyph = PEEK(0, 1);
@@ -1596,9 +1622,9 @@ BEGIN_OPERATOR(random)
     POKE(1, 0, glyph_of(result));
   } else {
     // Uppercase 'R' - pure random, evaluated every tick
-    PORT(0, -1, IN | PARAM);
-    PORT(0, 1, IN);
-    PORT(1, 0, OUT);
+    NAMED_PORT(0, -1, IN | PARAM, "min");
+    NAMED_PORT(0, 1, IN, "max");
+    NAMED_PORT(1, 0, OUT, "value");
     Glyph gb = PEEK(0, 1);
     Usz a = index_of(PEEK(0, -1));
     Usz b = index_of(gb);
@@ -1670,11 +1696,11 @@ typedef struct {
 static Bouncer_state bouncer_states[4096] = {0};
 
 BEGIN_OPERATOR(bouncer)
-  PORT(0, 1, IN | PARAM); // Start value (a)
-  PORT(0, 2, IN | PARAM); // End value (b)
-  PORT(0, 3, IN);          // Rate (ticks per cycle)
-  PORT(0, 4, IN);          // Shape (0-7 for different waveforms)
-  PORT(1, 0, OUT);
+  NAMED_PORT(0, 1, IN | PARAM, "start"); // Start value (a)
+  NAMED_PORT(0, 2, IN | PARAM, "end"); // End value (b)
+  NAMED_PORT(0, 3, IN, "rate");          // Rate (ticks per cycle)
+  NAMED_PORT(0, 4, IN, "shape");          // Shape (0-7 for different waveforms)
+  NAMED_PORT(1, 0, OUT, "value");
 
   Glyph start_g = PEEK(0, 1);
   Glyph end_g = PEEK(0, 2);
@@ -1769,4 +1795,57 @@ void orca_run(Glyph *restrict gbuf, Mark *restrict mbuf, Usz height, Usz width,
       }
     }
   }
+}
+
+// Function to get port name for tooltip system
+char const *get_operator_port_name(Glyph operator_char, Usz operator_y, Usz operator_x, 
+                                   Usz port_y, Usz port_x, Usz grid_height, Usz grid_width,
+                                   Glyph const *gbuffer, Mark const *mbuffer) {
+  // Create a temporary port names array and extra params
+  Port_info port_names[MAX_PORTS_PER_OPERATOR];
+  Oper_extra_params extras;
+  extras.vars_slots = NULL;
+  extras.oevent_list = NULL;
+  extras.random_seed = 0;
+  extras.port_names = port_names;
+  extras.port_count = 0;
+  
+  // Calculate relative position
+  Isz rel_y = (Isz)port_y - (Isz)operator_y;
+  Isz rel_x = (Isz)port_x - (Isz)operator_x;
+  
+  // Create a temporary buffer for the operator to run and register its ports
+  // We'll call the operator function just to get port registration, not to actually run it
+  Mark cell_flags = 0; // No special flags needed for port discovery
+  
+  // Call the appropriate operator function to register ports
+  switch (operator_char) {
+#define UNIQUE_CASE(_oper_char, _oper_name)                                    \
+  case _oper_char:                                                             \
+    oper_behavior_##_oper_name((Glyph*)gbuffer, (Mark*)mbuffer, grid_height, grid_width, \
+                               operator_y, operator_x, 0, &extras, cell_flags, operator_char); \
+    break;
+
+#define ALPHA_CASE(_upper_oper_char, _oper_name)                               \
+  case _upper_oper_char:                                                       \
+  case (char)(_upper_oper_char | 1 << 5):                                      \
+    oper_behavior_##_oper_name((Glyph*)gbuffer, (Mark*)mbuffer, grid_height, grid_width, \
+                               operator_y, operator_x, 0, &extras, cell_flags, operator_char); \
+    break;
+    UNIQUE_OPERATORS(UNIQUE_CASE)
+    ALPHA_OPERATORS(ALPHA_CASE)
+#undef UNIQUE_CASE
+#undef ALPHA_CASE
+  default:
+    return NULL;
+  }
+  
+  // Look for the port name that matches the relative position
+  for (Usz i = 0; i < extras.port_count; ++i) {
+    if (port_names[i].delta_y == rel_y && port_names[i].delta_x == rel_x) {
+      return port_names[i].name;
+    }
+  }
+  
+  return NULL;
 }

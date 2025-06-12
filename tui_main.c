@@ -462,7 +462,8 @@ staticni void draw_hud(WINDOW *win, int win_y, int win_x, int height, int width,
                        char const *filename, Usz field_h, Usz field_w,
                        Usz ruler_spacing_y, Usz ruler_spacing_x, Usz tick_num,
                        Usz bpm, Ged_cursor const *ged_cursor,
-                       Ged_input_mode input_mode, Usz activity_counter) {
+                       Ged_input_mode input_mode, Usz activity_counter,
+                       char const *port_param_info) {
   (void)height;
   (void)width;
   enum { Tabstop = 8 };
@@ -502,6 +503,22 @@ staticni void draw_hud(WINDOW *win, int win_y, int win_x, int height, int width,
   advance_faketab(win, win_x, Tabstop);
   wattrset(win, A_normal);
   waddstr(win, filename);
+
+  if (port_param_info) {
+    int param_info_len = (int)strlen(port_param_info);
+    int param_x =
+        width - param_info_len - 1; // Right-aligned with 1 char margin
+    if (param_x > win_x) {          // Only show if there's room
+      wmove(win, win_y + 1, param_x);
+      wattrset(
+          win,
+          (int)(A_dim |
+                fg_bg(
+                    C_green,
+                    C_natural))); // Different color to distinguish from other info
+      waddstr(win, port_param_info);
+    }
+  }
 }
 
 staticni void draw_glyphs_grid(WINDOW *win, int draw_y, int draw_x, int draw_h,
@@ -1447,10 +1464,16 @@ staticni void ged_draw(Ged *a, WINDOW *win, char const *filename,
   if (a->is_hud_visible) {
     filename = filename ? filename : "unnamed";
     int hud_x = win_w > 50 + a->softmargin_x * 2 ? a->softmargin_x : 0;
+
+    // Get port parameter info for cursor position
+    char const *port_param_info = get_port_parameter_name(
+        a->ged_cursor.y, a->ged_cursor.x, &a->field, a->mbuf_r.buffer);
+
     draw_hud(win, a->grid_h, hud_x, Hud_height, win_w, filename,
              a->field.height, a->field.width, a->ruler_spacing_y,
              a->ruler_spacing_x, a->tick_num, a->bpm, &a->ged_cursor,
-             a->input_mode, a->activity_counter);
+             a->input_mode, a->activity_counter,
+             port_param_info); // Pass port_param_info
   }
   if (a->draw_event_list)
     draw_oevent_list(win, &a->oevent_list);
@@ -2278,8 +2301,7 @@ static void push_opers_guide_msg(void) {
       {'=', "midichord", "Sends preset chords over MIDI."},
       // {';', "udp", "Sends UDP message."},
       {';', "arpeggiator", "Outputs degree numbers for Scale operator."},
-      {'&', "bouncer", "A rudimentary LFO-like operator."}
-      };
+      {'&', "bouncer", "A rudimentary LFO-like operator."}};
   int w_desc = 0;
   for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
     if (items[i].desc) {
@@ -2402,6 +2424,70 @@ staticni bool read_nxn_or_n(char const *str, int *out_a, int *out_b) {
     return true;
   }
   return false;
+}
+
+
+
+// Helper function to get operator name for display
+static char const *get_operator_name(Glyph op) {
+  // Use the same operator guide lookup table as the operators guide
+  struct Guide_item {
+    char glyph;
+    char const *name;
+    char const *desc;
+  };
+  static struct Guide_item items[] = {
+      {'A', "add", "Outputs sum of inputs."},
+      {'B', "subtract", "Outputs difference of inputs."},
+      {'C', "clock", "Outputs modulo of frame."},
+      {'D', "delay", "Bangs on modulo of frame."},
+      {'E', "east", "Moves eastward, or bangs."},
+      {'F', "if", "Bangs if inputs are equal."},
+      {'G', "generator", "Writes operands with offset."},
+      {'H', "halt", "Halts southward operand."},
+      {'I', "increment", "Increments southward operand."},
+      {'J', "jumper", "Outputs northward operand."},
+      {'K', "konkat", "Reads multiple variables."},
+      {'L', "lesser", "Outputs smallest input."},
+      {'M', "multiply", "Outputs product of inputs."},
+      {'N', "north", "Moves Northward, or bangs."},
+      {'O', "read", "Reads operand with offset."},
+      {'P', "push", "Writes eastward operand."},
+      {'Q', "query", "Reads operands with offset."},
+      {'R', "random", "Outputs random value."},
+      {'S', "south", "Moves southward, or bangs."},
+      {'T', "track", "Reads eastward operand."},
+      {'U', "uclid", "Bangs on Euclidean rhythm."},
+      {'V', "variable", "Reads and writes variable."},
+      {'W', "west", "Moves westward, or bangs."},
+      {'X', "write", "Writes operand with offset."},
+      {'Y', "jymper", "Outputs westward operand."},
+      {'Z', "lerp", "Transitions operand to target."},
+      {'*', "bang", "Bangs neighboring operands."},
+      {'#', "comment", "Halts line."},
+      {':', "midi", "Sends MIDI note."},
+      {'!', "cc", "Sends MIDI control change."},
+      {'?', "pb", "Sends MIDI pitch bend."},
+      {'$', "scale", "Outputs note base on root, scale, degree."},
+      {'%', "mono", "Sends MIDI monophonic note."},
+      {'=', "midichord", "Sends preset chords over MIDI."},
+      {';', "arpeggiator", "Outputs degree numbers for Scale operator."},
+      {'&', "bouncer", "A rudimentary LFO-like operator."}};
+
+  // Convert to uppercase for lookup
+  Glyph lookup_char = op;
+  if (lookup_char >= 'a' && lookup_char <= 'z') {
+    lookup_char = lookup_char - 'a' + 'A';
+  }
+
+  // Find the operator in our lookup table
+  for (Usz i = 0; i < ORCA_ARRAY_COUNTOF(items); ++i) {
+    if (items[i].glyph == lookup_char) {
+      return items[i].name;
+    }
+  }
+
+  return NULL; // Unknown operator
 }
 
 typedef enum {
