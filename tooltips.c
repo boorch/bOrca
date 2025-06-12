@@ -143,7 +143,8 @@ static Port_tooltip midicc_tooltips[] = {
   {0, 2, "Control (hundreds)"},
   {0, 3, "Control (tens)"},
   {0, 4, "Control (ones)"},
-  {0, 5, "Value"}
+  {0, 5, "Value"},
+  {0, 6, "Interpolation Rate"}
 };
 
 static Port_tooltip midipb_tooltips[] = {
@@ -441,6 +442,7 @@ Enhanced_tooltip get_enhanced_tooltip_at_cursor(Glyph const *gbuffer, Mark const
             
             // Check for MIDI CC value port enhancement
             bool is_midicc_value_port = (op_char == '!' && rel_y == 0 && rel_x == 5);  // MIDI CC operator, value input
+            bool is_midicc_interp_port = (op_char == '!' && rel_y == 0 && rel_x == 6);  // MIDI CC operator, interpolation rate input
             
             // If it's a MIDI CC value port and has a non-empty value, enhance the tooltip
             if (is_midicc_value_port && cursor_glyph != '.') {
@@ -452,6 +454,22 @@ Enhanced_tooltip get_enhanced_tooltip_at_cursor(Glyph const *gbuffer, Mark const
               
               result.line1 = "Value:";
               result.line2 = value_text;
+              result.is_enhanced = true;
+              return result;
+            }
+            
+            // If it's a MIDI CC interpolation rate port and has a non-empty value, enhance the tooltip
+            if (is_midicc_interp_port && cursor_glyph != '.') {
+              static char interp_text[32];
+              if (cursor_glyph == '.') {
+                snprintf(interp_text, sizeof(interp_text), "instant");
+              } else {
+                Usz rate_index = index_of(cursor_glyph);
+                snprintf(interp_text, sizeof(interp_text), "rate %d", (int)rate_index);
+              }
+              
+              result.line1 = "Interpolation:";
+              result.line2 = interp_text;
               result.is_enhanced = true;
               return result;
             }

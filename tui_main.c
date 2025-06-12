@@ -677,6 +677,12 @@ staticni void draw_oevent_list(WINDOW *win, Oevent_list const *oevent_list) {
               (int)ec->channel, (int)ec->control, (int)ec->value);
       break;
     }
+    case Oevent_type_midi_cc_interpolated: {
+      Oevent_midi_cc_interpolated const *eci = &ev->midi_cc_interpolated;
+      wprintw(win, "MIDI CC Interp\tchannel %d\tcontrol %d\ttarget %d\trate %d",
+              (int)eci->channel, (int)eci->control, (int)eci->target_value, (int)eci->interpolation_rate);
+      break;
+    }
     case Oevent_type_midi_pb: {
       Oevent_midi_pb const *ep = &ev->midi_pb;
       wprintw(win, "MIDI PB\tchannel %d\tmsb %d\tlsb %d", (int)ep->channel,
@@ -1120,7 +1126,7 @@ staticni void ged_stop_all_sustained_notes(Ged *a) {
 
 staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
                                  Usz bpm, Susnote_list *susnote_list,
-                                 Oevent const *events, Usz count) {
+                                 Oevent const *events, Usz count, Usz tick_num) {
   enum { Midi_on_capacity = 512 };
   typedef struct {
     U8 channel;
@@ -1181,6 +1187,13 @@ staticni void send_output_events(Oosc_dev *oosc_dev, Midi_mode *midi_mode,
       // buffer more complicated and interleave the CCs in it.
       send_midi_chan_msg(oosc_dev, midi_mode, 0xb, ec->channel, ec->control,
                          ec->value);
+      break;
+    }
+    case Oevent_type_midi_cc_interpolated: {
+      Oevent_midi_cc_interpolated const *eci = &e->midi_cc_interpolated;
+      // Process the interpolation request to set up state for later processing
+      process_interpolated_midi_cc_event(eci, tick_num);
+      // The interpolation system will generate MIDI CC events during advance_midi_cc_interpolations()
       break;
     }
     case Oevent_type_midi_pb: {
@@ -1368,6 +1381,17 @@ staticni void ged_do_stuff(Ged *a) {
   }
   apply_time_to_sustained_notes(oosc_dev, midi_mode, secs_span,
                                 &a->susnote_list, &a->time_to_next_note_off);
+  
+  // Process MIDI CC interpolations and generate intermediate CC events
+  advance_midi_cc_interpolations(secs_span, &a->scratch_oevent_list);
+  
+  // Send any generated interpolated CC events
+  if (a->scratch_oevent_list.count > 0) {
+    send_output_events(oosc_dev, midi_mode, a->bpm, &a->susnote_list,
+                       a->scratch_oevent_list.buffer, a->scratch_oevent_list.count, a->tick_num);
+    oevent_list_clear(&a->scratch_oevent_list); // Clear for next use
+  }
+  
   clear_and_run_vm(a->field.buffer, a->mbuf_r.buffer, a->field.height,
                    a->field.width, a->tick_num, &a->oevent_list,
                    a->random_seed);
@@ -1378,7 +1402,7 @@ staticni void ged_do_stuff(Ged *a) {
   Usz count = a->oevent_list.count;
   if (count > 0) {
     send_output_events(oosc_dev, midi_mode, a->bpm, &a->susnote_list,
-                       a->oevent_list.buffer, count);
+                       a->oevent_list.buffer, count, a->tick_num);
     a->activity_counter += count;
   }
 }

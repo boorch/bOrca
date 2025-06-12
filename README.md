@@ -224,15 +224,16 @@ The MIDI CC operator sends MIDI Control Change messages. The control number is s
 
 ### Inputs
 
-| Operator | Channel | Control Hundreds | Control Tens | Control Ones | Value |
-|:--------:|:-------:|:---------------:|:------------:|:------------:|:-----:|
-|    !     |    C    |       Ch        |      Ct      |      Co      |   V   |
+| Operator | Channel | Control Hundreds | Control Tens | Control Ones | Value | Interpolation Rate |
+|:--------:|:-------:|:---------------:|:------------:|:------------:|:-----:|:-----------------:|
+|    !     |    C    |       Ch        |      Ct      |      Co      |   V   |         R         |
 
 - `C`: MIDI channel (0-F)
 - `Ch`: Hundreds digit of control number (0-9) or `.` to omit
 - `Ct`: Tens digit of control number (0-9) or `.` to omit  
 - `Co`: Ones digit of control number (0-9) or `.` to omit
 - `V`: Control value (0-z) - maps to MIDI CC values in increments of 4
+- `R`: Interpolation rate (0-z) - `.` for instant, 1-z for interpolated transitions
 
 ### Common MIDI CC Values
 - `0` → 0 (minimum)
@@ -243,9 +244,21 @@ The MIDI CC operator sends MIDI Control Change messages. The control number is s
 
 ### Examples
 
-- `!3..70` - Sends MIDI CC #7 (volume) on channel 3 with value 0 (silent)
-- `!3..7g` - Sends MIDI CC #7 (volume) on channel 3 with value 64 (half volume)
-- `!3..7w` - Sends MIDI CC #7 (volume) on channel 3 with value 127 (full volume)
-- `!3.01o` - Sends MIDI CC #1 (mod wheel) on channel 3 with value 96
+- `!3..70.` - Sends MIDI CC #7 (volume) on channel 3 with value 0 (silent), instant
+- `!3..7g.` - Sends MIDI CC #7 (volume) on channel 3 with value 64 (half volume), instant
+- `!3..7w.` - Sends MIDI CC #7 (volume) on channel 3 with value 127 (full volume), instant
+- `!3.01o.` - Sends MIDI CC #1 (mod wheel) on channel 3 with value 96, instant
+- `!3..7g5` - Sends MIDI CC #7 on channel 3 with value 64, interpolated at rate 5
+- `!3..7w1` - Sends MIDI CC #7 on channel 3 with value 127, slowly interpolated (rate 1)
+
+### Interpolation
+
+When the 6th parameter (interpolation rate) is provided and not `.`, the operator will smoothly transition the CC value from its current position to the target value over multiple frames. This allows for smooth parameter sweeps and reduces the "staircase" effect of Orca's discrete timing.
+
+- **Rate `.`**: Instant change (default behavior)
+- **Rate `1`**: Slowest interpolation (many steps)
+- **Rate `z`**: Fastest interpolation (few steps)
+
+The interpolation system maintains separate state for each channel+control combination, allowing multiple CCs to interpolate independently.
 
 The operator automatically clamps control numbers above 127 to 127 to ensure valid MIDI CC range. Values use increments of 4 for predictable and musical MIDI CC values.

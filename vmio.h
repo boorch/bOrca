@@ -4,6 +4,7 @@
 typedef enum {
   Oevent_type_midi_note,
   Oevent_type_midi_cc,
+  Oevent_type_midi_cc_interpolated,
   Oevent_type_midi_pb,
   Oevent_type_osc_ints,
   Oevent_type_udp_string,
@@ -36,6 +37,13 @@ typedef struct {
 
 typedef struct {
   U8 oevent_type;
+  U8 channel, control;
+  U8 target_value;
+  U8 interpolation_rate; // 0 = instant, 1-35 = interpolation speed
+} Oevent_midi_cc_interpolated;
+
+typedef struct {
+  U8 oevent_type;
   U8 channel, lsb, msb;
 } Oevent_midi_pb;
 
@@ -60,6 +68,7 @@ typedef union {
   Oevent_any any;
   Oevent_midi_note midi_note;
   Oevent_midi_cc midi_cc;
+  Oevent_midi_cc_interpolated midi_cc_interpolated;
   Oevent_midi_pb midi_pb;
   Oevent_osc_ints osc_ints;
   Oevent_udp_string udp_string;

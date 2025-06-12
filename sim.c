@@ -448,18 +448,130 @@ END_OPERATOR
 //   }
 // END_OPERATOR
 
+// MIDI CC Interpolation State Management
+typedef struct {
+  bool active;
+  double current_value;    // Current interpolated value (0-127)
+  double target_value;     // Target value (0-127)
+  double step_size;        // Step increment per sub-frame
+  double steps_remaining;  // Remaining interpolation steps
+  U8 channel;              // MIDI channel
+  U8 control;              // MIDI control number
+  Usz last_tick;           // Last tick this was updated
+} Midicc_interp_state;
+
+#define MAX_MIDICC_INTERP_STATES 4096
+static Midicc_interp_state midicc_interp_states[MAX_MIDICC_INTERP_STATES] = {0};
+
+// Function to process interpolated MIDI CC events and update states
+void process_interpolated_midi_cc_event(Oevent_midi_cc_interpolated const *event, Usz tick_number) {
+  // Calculate unique state index based on channel and control
+  // This ensures each CC channel+control combination has its own interpolation state
+  Usz state_index = (event->channel * 128 + event->control) % MAX_MIDICC_INTERP_STATES;
+  Midicc_interp_state *state = &midicc_interp_states[state_index];
+  
+  // Convert interpolation rate (0-35) to actual steps
+  // Rate 0 = instant (1 step), rate 1 = slow (many steps), rate 35 = fast (few steps)
+  double steps_per_frame = 1.0; // Default to instant
+  if (event->interpolation_rate > 0) {
+    // Map rate 1-35 to interpolation speeds
+    // Lower rate = slower interpolation = more steps
+    // Higher rate = faster interpolation = fewer steps
+    steps_per_frame = 36.0 - (double)event->interpolation_rate; // Rate 1 = 35 steps, rate 35 = 1 step
+  }
+  
+  double target_value = (double)event->target_value;
+  
+  // Initialize or update state
+  if (!state->active || state->channel != event->channel || 
+      state->control != event->control) {
+    // New interpolation or different CC - start fresh
+    state->active = true;
+    state->channel = event->channel;
+    state->control = event->control;
+    // Start from current value or 0 for new CC
+    state->current_value = 0.0; // TODO: Could track actual current value
+    state->target_value = target_value;
+    if (steps_per_frame > 1.0) {
+      state->steps_remaining = steps_per_frame;
+      state->step_size = (target_value - state->current_value) / steps_per_frame;
+    } else {
+      // Instant mode - jump to target immediately
+      state->current_value = target_value;
+      state->steps_remaining = 1.0; // Will generate one event then stop
+      state->step_size = 0;
+    }
+  } else {
+    // Continuing interpolation - calculate new path to target from current position
+    double delta = target_value - state->current_value;
+    state->target_value = target_value;
+    if (steps_per_frame > 1.0 && delta != 0.0) {
+      state->steps_remaining = steps_per_frame;
+      state->step_size = delta / steps_per_frame;
+    } else {
+      // Instant mode or no change needed
+      state->current_value = target_value;
+      state->steps_remaining = 1.0; // Will generate one event then stop
+      state->step_size = 0;
+    }
+  }
+  
+  state->last_tick = tick_number;
+}
+
+// Function to advance all active interpolations and generate MIDI CC events
+void advance_midi_cc_interpolations(double delta_time, Oevent_list *oevent_list) {
+  for (Usz i = 0; i < MAX_MIDICC_INTERP_STATES; i++) {
+    Midicc_interp_state *state = &midicc_interp_states[i];
+    
+    if (!state->active || state->steps_remaining <= 0) {
+      continue;
+    }
+    
+    // Advance interpolation based on delta time
+    // For simplicity, we advance by one step per frame, but could use delta_time for sub-frame accuracy
+    double steps_to_advance = 1.0; // Could be: delta_time * interpolation_speed_factor
+    (void)delta_time; // Mark as used to avoid warning
+    
+    state->current_value += state->step_size * steps_to_advance;
+    state->steps_remaining -= steps_to_advance;
+    
+    // Clamp to target if we've reached or passed it
+    if ((state->step_size > 0 && state->current_value >= state->target_value) ||
+        (state->step_size < 0 && state->current_value <= state->target_value) ||
+        state->steps_remaining <= 0) {
+      state->current_value = state->target_value;
+      state->steps_remaining = 0;
+      state->active = false; // Mark as complete
+    }
+    
+    // Clamp to valid MIDI range
+    if (state->current_value > 127.0) state->current_value = 127.0;
+    if (state->current_value < 0.0) state->current_value = 0.0;
+    
+    // Generate MIDI CC event with interpolated value
+    Oevent_midi_cc *oe = (Oevent_midi_cc *)oevent_list_alloc_item(oevent_list);
+    oe->oevent_type = Oevent_type_midi_cc;
+    oe->channel = state->channel;
+    oe->control = state->control;
+    oe->value = (U8)(state->current_value + 0.5); // Round to nearest integer
+  }
+}
+
 BEGIN_OPERATOR(midicc)
   PORT(0, 1, IN | PARAM, "Channel");
   PORT(0, 2, IN | PARAM, "Control (hundreds)");
   PORT(0, 3, IN | PARAM, "Control (tens)");
   PORT(0, 4, IN | PARAM, "Control (ones)");
   PORT(0, 5, IN | PARAM, "Value");
+  PORT(0, 6, IN | PARAM, "Interpolation Rate");
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
   Glyph control_h = PEEK(0, 2);  // hundreds
   Glyph control_t = PEEK(0, 3);  // tens
   Glyph control_o = PEEK(0, 4);  // ones
   Glyph value_g = PEEK(0, 5);
+  Glyph interp_rate_g = PEEK(0, 6);
 
   if (channel_g == '.' || value_g == '.')
     return;
@@ -477,17 +589,32 @@ BEGIN_OPERATOR(midicc)
   // Clamp to valid MIDI CC range (0-127)
   if (control_num > 127) control_num = 127;
   
-  PORT(0, 0, OUT, "");
-  Oevent_midi_cc *oe =
-      (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
-  oe->oevent_type = Oevent_type_midi_cc;
-  oe->channel = (U8)channel;
-  oe->control = (U8)control_num;
   // Map ORCA values (0-35) to MIDI CC values in increments of 4: 0→0, 1→4, 2→8, etc.
   Usz value_index = index_of(value_g);
   Usz midi_value = value_index * 4;
   if (midi_value > 127) midi_value = 127; // Clamp to MIDI CC range
-  oe->value = (U8)midi_value;
+  
+  PORT(0, 0, OUT, "");
+  
+  // Handle interpolation rate
+  if (interp_rate_g == '.') {
+    // No interpolation - send immediate CC
+    Oevent_midi_cc *oe =
+        (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_cc;
+    oe->channel = (U8)channel;
+    oe->control = (U8)control_num;
+    oe->value = (U8)midi_value;
+  } else {
+    // Send interpolated CC event
+    Oevent_midi_cc_interpolated *oe =
+        (Oevent_midi_cc_interpolated *)oevent_list_alloc_item(extra_params->oevent_list);
+    oe->oevent_type = Oevent_type_midi_cc_interpolated;
+    oe->channel = (U8)channel;
+    oe->control = (U8)control_num;
+    oe->target_value = (U8)midi_value;
+    oe->interpolation_rate = (U8)index_of(interp_rate_g);
+  }
 END_OPERATOR
 
 BEGIN_OPERATOR(comment)
