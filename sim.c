@@ -161,9 +161,12 @@ static void oper_poke_and_stun(Glyph *restrict gbuffer, Mark *restrict mbuffer,
   if (!oper_has_neighboring_bang(gbuffer, height, width, y, x))                \
   return
 
-#define PORT(_delta_y, _delta_x, _flags)                                       \
-  mbuffer_poke_relative_flags_or(mbuffer, height, width, y, x, _delta_y,       \
-                                 _delta_x, (_flags) ^ Mark_flag_lock)
+#define PORT(_delta_y, _delta_x, _flags, _tooltip)                             \
+  do {                                                                         \
+    mbuffer_poke_relative_flags_or(mbuffer, height, width, y, x, _delta_y,     \
+                                   _delta_x, (_flags) ^ Mark_flag_lock);        \
+    (void)(_tooltip); /* Suppress unused parameter warning for now */          \
+  } while(0)
 //////// Operators
 
 #define UNIQUE_OPERATORS(_)                                                    \
@@ -447,7 +450,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
   for (Usz i = 1; i < 5; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
+    PORT(0, (Isz)i, IN | PARAM, "Channel/CC/Value");
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -461,7 +464,7 @@ BEGIN_OPERATOR(midicc)
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
-  PORT(0, 0, OUT);
+  PORT(0, 0, OUT, "Output");
   Oevent_midi_cc *oe =
       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_cc;
@@ -491,7 +494,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
-    PORT(0, (Isz)i, IN | PARAM);
+    PORT(0, (Isz)i, IN | PARAM, "Channel/Octave/Note/Velocity/Length");
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -521,7 +524,7 @@ BEGIN_OPERATOR(midi)
     if (vel_num > 127)
       vel_num = 127;
   }
-  PORT(0, 0, OUT);
+  PORT(0, 0, OUT, "Output");
   Oevent_midi_note *oe =
       (Oevent_midi_note *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = (U8)Oevent_type_midi_note;
