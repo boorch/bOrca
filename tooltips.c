@@ -348,14 +348,29 @@ static Operator_tooltips operator_tooltips_table[] = {
 char const *get_tooltip_at_cursor(Glyph const *gbuffer, Mark const *mbuffer,
                                   Usz field_h, Usz field_w, 
                                   Usz cursor_y, Usz cursor_x) {
+  Enhanced_tooltip enhanced = get_enhanced_tooltip_at_cursor(gbuffer, mbuffer, field_h, field_w, cursor_y, cursor_x);
+  if (enhanced.is_enhanced) {
+    // For enhanced tooltips, create a single-line version for backward compatibility
+    static char single_line_tooltip[64];
+    snprintf(single_line_tooltip, sizeof(single_line_tooltip), "%s %s", enhanced.line1, enhanced.line2);
+    return single_line_tooltip;
+  }
+  return enhanced.line1; // For regular tooltips, line1 contains the tooltip text
+}
+
+Enhanced_tooltip get_enhanced_tooltip_at_cursor(Glyph const *gbuffer, Mark const *mbuffer,
+                                                Usz field_h, Usz field_w, 
+                                                Usz cursor_y, Usz cursor_x) {
+  Enhanced_tooltip result = {NULL, NULL, false};
+  
   // Check bounds
   if (cursor_y >= field_h || cursor_x >= field_w)
-    return NULL;
+    return result;
     
   // Check if cursor is on a PORT
   Mark cursor_mark = mbuffer[cursor_y * field_w + cursor_x];
   if (!(cursor_mark & (Mark_flag_input | Mark_flag_output)))
-    return NULL;
+    return result;
     
   // Get the glyph at cursor position
   Glyph cursor_glyph = gbuffer[cursor_y * field_w + cursor_x];
@@ -404,20 +419,24 @@ char const *get_tooltip_at_cursor(Glyph const *gbuffer, Mark const *mbuffer,
             if (is_scale_chord_port && cursor_glyph != '.') {
               char const *scale_chord_name = get_scale_chord_name(cursor_glyph, is_midichord_op);
               if (scale_chord_name) {
-                // Use a static buffer to create the enhanced tooltip
-                static char enhanced_tooltip[64];
-                snprintf(enhanced_tooltip, sizeof(enhanced_tooltip), "%s: %s", 
-                        port->tooltip, scale_chord_name);
-                return enhanced_tooltip;
+                // Create enhanced two-line tooltip
+                result.line1 = is_midichord_op ? "Chord type:" : "Scale:";
+                result.line2 = scale_chord_name;
+                result.is_enhanced = true;
+                return result;
               }
             }
             
-            return port->tooltip;
+            // Regular tooltip
+            result.line1 = port->tooltip;
+            result.line2 = NULL;
+            result.is_enhanced = false;
+            return result;
           }
         }
       }
     }
   }
   
-  return NULL;
+  return result;
 }

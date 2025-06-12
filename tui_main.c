@@ -506,27 +506,45 @@ staticni void draw_hud(WINDOW *win, int win_y, int win_x, int height, int width,
   waddstr(win, filename);
   
   // Display tooltip if cursor is on a PORT
-  char const *tooltip = get_tooltip_at_cursor(gbuffer, mbuffer, field_h, field_w,
-                                              ged_cursor->y, ged_cursor->x);
-  if (tooltip) {
-    // Get window dimensions to align tooltip to bottom right
+  Enhanced_tooltip enhanced_tooltip = get_enhanced_tooltip_at_cursor(gbuffer, mbuffer, field_h, field_w,
+                                                                     ged_cursor->y, ged_cursor->x);
+  if (enhanced_tooltip.line1) {
+    // Get window dimensions to align tooltip to right side
     int win_height, win_width;
     getmaxyx(win, win_height, win_width);
     
-    // Calculate tooltip position (bottom right, growing leftward)
-    int tooltip_len = (int)strlen(tooltip);
-    int tooltip_y = win_height - 1;
-    int tooltip_x = win_width - tooltip_len - 1;
-    
-    // Make sure tooltip fits on screen
-    if (tooltip_x < 0) tooltip_x = 0;
-    if (tooltip_y < 0) tooltip_y = 0;
-    
-    // Draw tooltip with highlighted background
-    wmove(win, tooltip_y, tooltip_x);
-    wattrset(win, A_reverse);
-    waddstr(win, tooltip);
-    wattrset(win, A_normal);
+    if (enhanced_tooltip.is_enhanced) {
+      // Enhanced scale/chord tooltip: split into two lines
+      // Line 1 (label) goes on 3rd line from bottom, aligned with BPM, etc.
+      int label_len = (int)strlen(enhanced_tooltip.line1);
+      int label_x = win_width - label_len - 1;
+      if (label_x < 0) label_x = 0;
+      
+      wmove(win, win_height - 3, label_x);
+      wattrset(win, A_reverse);
+      waddstr(win, enhanced_tooltip.line1);
+      wattrset(win, A_normal);
+      
+      // Line 2 (value) goes on 2nd line from bottom, aligned with cursor pos, mode, etc.
+      int value_len = (int)strlen(enhanced_tooltip.line2);
+      int value_x = win_width - value_len - 1;
+      if (value_x < 0) value_x = 0;
+      
+      wmove(win, win_height - 2, value_x);
+      wattrset(win, A_reverse);
+      waddstr(win, enhanced_tooltip.line2);
+      wattrset(win, A_normal);
+    } else {
+      // Regular tooltip: single line on 3rd line from bottom
+      int tooltip_len = (int)strlen(enhanced_tooltip.line1);
+      int tooltip_x = win_width - tooltip_len - 1;
+      if (tooltip_x < 0) tooltip_x = 0;
+      
+      wmove(win, win_height - 3, tooltip_x);
+      wattrset(win, A_reverse);
+      waddstr(win, enhanced_tooltip.line1);
+      wattrset(win, A_normal);
+    }
   }
 }
 
