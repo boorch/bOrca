@@ -6,6 +6,7 @@
 #include "sim.h"
 #include "sysmisc.h"
 #include "term_util.h"
+#include "tooltips.h"
 #include "vmio.h"
 #include <getopt.h>
 #include <locale.h>
@@ -462,7 +463,8 @@ staticni void draw_hud(WINDOW *win, int win_y, int win_x, int height, int width,
                        char const *filename, Usz field_h, Usz field_w,
                        Usz ruler_spacing_y, Usz ruler_spacing_x, Usz tick_num,
                        Usz bpm, Ged_cursor const *ged_cursor,
-                       Ged_input_mode input_mode, Usz activity_counter) {
+                       Ged_input_mode input_mode, Usz activity_counter,
+                       Glyph const *gbuffer, Mark const *mbuffer) {
   (void)height;
   (void)width;
   enum { Tabstop = 8 };
@@ -502,6 +504,30 @@ staticni void draw_hud(WINDOW *win, int win_y, int win_x, int height, int width,
   advance_faketab(win, win_x, Tabstop);
   wattrset(win, A_normal);
   waddstr(win, filename);
+  
+  // Display tooltip if cursor is on a PORT
+  char const *tooltip = get_tooltip_at_cursor(gbuffer, mbuffer, field_h, field_w,
+                                              ged_cursor->y, ged_cursor->x);
+  if (tooltip) {
+    // Get window dimensions to align tooltip to bottom right
+    int win_height, win_width;
+    getmaxyx(win, win_height, win_width);
+    
+    // Calculate tooltip position (bottom right, growing leftward)
+    int tooltip_len = (int)strlen(tooltip);
+    int tooltip_y = win_height - 1;
+    int tooltip_x = win_width - tooltip_len - 1;
+    
+    // Make sure tooltip fits on screen
+    if (tooltip_x < 0) tooltip_x = 0;
+    if (tooltip_y < 0) tooltip_y = 0;
+    
+    // Draw tooltip with highlighted background
+    wmove(win, tooltip_y, tooltip_x);
+    wattrset(win, A_reverse);
+    waddstr(win, tooltip);
+    wattrset(win, A_normal);
+  }
 }
 
 staticni void draw_glyphs_grid(WINDOW *win, int draw_y, int draw_x, int draw_h,
@@ -1450,7 +1476,7 @@ staticni void ged_draw(Ged *a, WINDOW *win, char const *filename,
     draw_hud(win, a->grid_h, hud_x, Hud_height, win_w, filename,
              a->field.height, a->field.width, a->ruler_spacing_y,
              a->ruler_spacing_x, a->tick_num, a->bpm, &a->ged_cursor,
-             a->input_mode, a->activity_counter);
+             a->input_mode, a->activity_counter, a->field.buffer, a->mbuf_r.buffer);
   }
   if (a->draw_event_list)
     draw_oevent_list(win, &a->oevent_list);
