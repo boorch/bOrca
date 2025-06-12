@@ -420,7 +420,18 @@ Enhanced_tooltip get_enhanced_tooltip_at_cursor(Glyph const *gbuffer, Mark const
               char const *scale_chord_name = get_scale_chord_name(cursor_glyph, is_midichord_op);
               if (scale_chord_name) {
                 // Create enhanced two-line tooltip
-                result.line1 = is_midichord_op ? "Chord type:" : "Scale:";
+                char const *label;
+                if (is_midichord_op) {
+                  label = "Chord type:";
+                } else {
+                  // For Scale operator, distinguish between scales (0-9) and chords (a-z, A-Z)
+                  if (cursor_glyph >= '0' && cursor_glyph <= '9') {
+                    label = "Scale:";
+                  } else {
+                    label = "Chord:";
+                  }
+                }
+                result.line1 = label;
                 result.line2 = scale_chord_name;
                 result.is_enhanced = true;
                 return result;
