@@ -140,9 +140,10 @@ static Port_tooltip midi_tooltips[] = {
 
 static Port_tooltip midicc_tooltips[] = {
   {0, 1, "Channel"},
-  {0, 2, "Control (tens)"},
-  {0, 3, "Control (ones)"},
-  {0, 4, "Value"}
+  {0, 2, "Control (hundreds)"},
+  {0, 3, "Control (tens)"},
+  {0, 4, "Control (ones)"},
+  {0, 5, "Value"}
 };
 
 static Port_tooltip midipb_tooltips[] = {

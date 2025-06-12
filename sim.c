@@ -450,27 +450,39 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
   PORT(0, 1, IN | PARAM, "Channel");
-  PORT(0, 2, IN | PARAM, "Control (tens)");
-  PORT(0, 3, IN | PARAM, "Control (ones)");
-  PORT(0, 4, IN | PARAM, "Value");
+  PORT(0, 2, IN | PARAM, "Control (hundreds)");
+  PORT(0, 3, IN | PARAM, "Control (tens)");
+  PORT(0, 4, IN | PARAM, "Control (ones)");
+  PORT(0, 5, IN | PARAM, "Value");
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
-  Glyph control_a = PEEK(0, 2);
-  Glyph control_b = PEEK(0, 3);
-  Glyph value_g = PEEK(0, 4);
+  Glyph control_h = PEEK(0, 2);  // hundreds
+  Glyph control_t = PEEK(0, 3);  // tens
+  Glyph control_o = PEEK(0, 4);  // ones
+  Glyph value_g = PEEK(0, 5);
 
-  if (channel_g == '.' || control_a == '.' || control_b == '.' ||
-      value_g == '.')
+  if (channel_g == '.' || value_g == '.')
     return;
+  
   Usz channel = index_of(channel_g);
   if (channel > 15)
     return;
+  
+  // Calculate CC number from hundreds, tens, ones (support . for missing digits)
+  Usz control_num = 0;
+  if (control_h != '.') control_num += index_of(control_h) * 100;
+  if (control_t != '.') control_num += index_of(control_t) * 10;
+  if (control_o != '.') control_num += index_of(control_o);
+  
+  // Clamp to valid MIDI CC range (0-127)
+  if (control_num > 127) control_num = 127;
+  
   PORT(0, 0, OUT, "");
   Oevent_midi_cc *oe =
       (Oevent_midi_cc *)oevent_list_alloc_item(extra_params->oevent_list);
   oe->oevent_type = Oevent_type_midi_cc;
   oe->channel = (U8)channel;
-  oe->control = (U8)((index_of(control_a) * 10) + (index_of(control_b)));
+  oe->control = (U8)control_num;
   oe->value = (U8)(index_of(value_g) * 127 / 35); // 0~35 → 0~127
 END_OPERATOR
 

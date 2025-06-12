@@ -220,26 +220,25 @@ The Rate parameter controls the speed of waveform traversal: Rate 0 = no movemen
 Output value cycles through the chosen waveform pattern between start and end values at the specified rate. Perfect for creating LFO-like modulations or smooth parameter changes.
 
 ## MIDI CC Operator (`!`) (Refactored)
-The MIDI CC operator sends MIDI Control Change messages with optional interpolation between values. The control number is specified in hexadecimal (00-FF) using two inputs for high and low nibbles. There's also a "Lerp" input, which compensates a little bit for ORCA's low resolution (base36) output, letting value changes happen slightly smoother. (e.g: when combined witn the Bouncer operator, it can act as a rudimentary LFO for controlling parameters on your synth)
+The MIDI CC operator sends MIDI Control Change messages. The control number is specified using three decimal digits (hundreds, tens, ones) allowing access to all MIDI CC numbers from 0-127. Missing digits can be omitted using `.` (e.g., `003` or `..3` for CC#3, `049` or `.49` for CC#49).
 
 ### Inputs
 
-| Operator | Channel | Control High | Control Low | Value | Lerp |
-|:--------:|:-------:|:-----------:|:-----------:|:-----:|:----:|
-|    !     |    C    |     Ch      |     Cl      |   V   |  L   |
+| Operator | Channel | Control Hundreds | Control Tens | Control Ones | Value |
+|:--------:|:-------:|:---------------:|:------------:|:------------:|:-----:|
+|    !     |    C    |       Ch        |      Ct      |      Co      |   V   |
 
 - `C`: MIDI channel (0-F)
-- `Ch`: High nibble of control number in hex (0-F)
-- `Cl`: Low nibble of control number in hex (0-F) 
-- `V`: Target value (0-z maps to 0-127)
-- `L`: Interpolation amount (0-z)
+- `Ch`: Hundreds digit of control number (0-9) or `.` to omit
+- `Ct`: Tens digit of control number (0-9) or `.` to omit  
+- `Co`: Ones digit of control number (0-9) or `.` to omit
+- `V`: Control value (0-z maps to 0-127)
 
-### Example
+### Examples
 
-- `!34ACf`
-- Sends MIDI CC #4A (74) on channel 3 with value C, rate f
-- Rate > 0 enables interpolation between current and target value
-- Higher Lerp value means more steps of interpolation (which can result in slower but higher resolution changes)
-- Rate of 0 or `.` disables interpolation
+- `!3..7a` - Sends MIDI CC #7 (volume) on channel 3 with value `a` (28)
+- `!31274` - Sends MIDI CC #127 (highest CC) on channel 3 with value `4` (14)
+- `!3.49z` - Sends MIDI CC #49 on channel 3 with value `z` (127)
+- `!300.g` - Sends MIDI CC #0 on channel 3 with value `g` (56)
 
-Uses a 128-step resolution for interpolation. The rate determines how many steps to skip per tick - higher rates mean faster but coarser transitions, lower rates mean smoother but slower transitions.
+The operator automatically clamps control numbers above 127 to 127 to ensure valid MIDI CC range.
