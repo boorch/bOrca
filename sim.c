@@ -447,7 +447,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midicc)
   for (Usz i = 1; i < 5; ++i) {
-    PORT(0, (Isz)i, IN);
+    PORT(0, (Isz)i, IN | PARAM);
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -491,7 +491,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midi)
   for (Usz i = 1; i < 6; ++i) {
-    PORT(0, (Isz)i, IN);
+    PORT(0, (Isz)i, IN | PARAM);
   }
   STOP_IF_NOT_BANGED;
   Glyph channel_g = PEEK(0, 1);
@@ -594,7 +594,7 @@ END_OPERATOR
 
 BEGIN_OPERATOR(midipb)
   for (Usz i = 1; i < 4; ++i) {
-    PORT(0, (Isz)i, IN);
+    PORT(0, (Isz)i, IN | PARAM);
   }
   PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
@@ -688,7 +688,7 @@ BEGIN_OPERATOR(generator)
   PORT(0, -2, IN | PARAM); // y
   PORT(0, -1, IN | PARAM); // len
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN);
+    PORT(0, i + 1, IN | PARAM);
     PORT(out_y, out_x + i, OUT | NONLOCKING);
     Glyph g = PEEK(0, i + 1);
     POKE_STUNNED(out_y, out_x + i, g);
@@ -744,7 +744,7 @@ BEGIN_OPERATOR(konkat)
     len = 1;
   PORT(0, -1, IN | PARAM);
   for (Isz i = 0; i < len; ++i) {
-    PORT(0, i + 1, IN);
+    PORT(0, i + 1, IN | PARAM);
     Glyph var = PEEK(0, i + 1);
     if (var != '.') {
       Usz var_idx = index_of(var);
@@ -908,6 +908,11 @@ BEGIN_OPERATOR(teleport)
   PORT(0, -2, IN | PARAM); // Y offset
   PORT(0, -1, IN | PARAM); // X offset
 
+  // Mark input ports for each input cell IMMEDIATELY to prevent them from executing
+  for (Usz i = 0; i < count; ++i) {
+    PORT(0, (Isz)i + 1, IN | PARAM);
+  }
+
   // Get offsets
   Glyph out_y_g = PEEK(0, -2);
   Glyph out_x_g = PEEK(0, -1);
@@ -929,11 +934,6 @@ BEGIN_OPERATOR(teleport)
   // For same row (y=0), horizontal offset must be > count
   if (out_y == 0 && out_x <= count)
     return;
-
-  // Mark input ports for each input cell
-  for (Usz i = 0; i < count; ++i) {
-    PORT(0, (Isz)i + 1, IN);
-  }
 
   // Lock and read inputs
   Glyph inputs[256];
@@ -1099,10 +1099,10 @@ static Usz scale_chord_lengths[] = {
 };
 
 BEGIN_OPERATOR(scale)
-  PORT(0, 1, IN);   // Octave input
-  PORT(0, 2, IN);   // Root note (like C, c, D etc)
-  PORT(0, 3, IN);   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
-  PORT(0, 4, IN);   // Degree
+  PORT(0, 1, IN | PARAM);   // Octave input
+  PORT(0, 2, IN | PARAM);   // Root note (like C, c, D etc)
+  PORT(0, 3, IN | PARAM);   // Scale/Chord (0-9 scales, a-z chords, A-Z first inversions)
+  PORT(0, 4, IN | PARAM);   // Degree
   PORT(1, -1, OUT); // Octave output
   PORT(1, 0, OUT);  // Note output
 
@@ -1210,7 +1210,7 @@ END_OPERATOR
 BEGIN_OPERATOR(midichord)
   // Check all required input ports
   for (Usz i = 1; i < 7; ++i) {
-    PORT(0, (Isz)i, IN);
+    PORT(0, (Isz)i, IN | PARAM);
   }
   PORT(0, 0, OUT); // Mark output immediately
   STOP_IF_NOT_BANGED;
@@ -1672,8 +1672,8 @@ static Bouncer_state bouncer_states[4096] = {0};
 BEGIN_OPERATOR(bouncer)
   PORT(0, 1, IN | PARAM); // Start value (a)
   PORT(0, 2, IN | PARAM); // End value (b)
-  PORT(0, 3, IN);          // Rate (ticks per cycle)
-  PORT(0, 4, IN);          // Shape (0-7 for different waveforms)
+  PORT(0, 3, IN | PARAM); // Rate (ticks per cycle)
+  PORT(0, 4, IN | PARAM); // Shape (0-7 for different waveforms)
   PORT(1, 0, OUT);
 
   Glyph start_g = PEEK(0, 1);
