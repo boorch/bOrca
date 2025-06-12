@@ -123,9 +123,9 @@ static Port_tooltip push_tooltips[] = {
 };
 
 static Port_tooltip query_tooltips[] = {
-  {0, -3, "Length"},
+  {0, -3, "X offset"},
   {0, -2, "Y offset"},
-  {0, -1, "X offset"}
+  {0, -1, "Length"}
 };
 
 static Port_tooltip random_tooltips[] = {
@@ -149,9 +149,9 @@ static Port_tooltip variable_tooltips[] = {
 };
 
 static Port_tooltip teleport_tooltips[] = {
-  {0, -3, "Count"},
-  {0, -2, "Y offset"},
-  {0, -1, "X offset"}
+  {0, -2, "X offset"},
+  {0, -1, "Y offset"},
+  {0, 1, "Input"}
 };
 
 static Port_tooltip yump_tooltips[] = {

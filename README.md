@@ -18,6 +18,9 @@ I'll try to add new operators based on my needs. I'm not a professional programm
 - Using it through SSH on a Raspberry Pi Zero 2W, connected to an iPad Pro 11", outputting MIDI data via USB, acting as a MIDI Gadget
 - Using it on my uConsole terminal, paired to a CME WIDI Jack via Bluetooth, which is connected to the MIDI ports of a Torso S4.
 
+## Tooltip System
+This fork includes an enhanced tooltip system inspired by the original tooltip functionality found in the Elektron version of ORCA. When positioning the cursor over operator input ports, contextual tooltips appear in the bottom-right corner of the screen showing parameter names like "Channel", "Octave", "Velocity", etc. This makes learning and using operators much more intuitive, especially for complex operators with multiple inputs. The tooltip system works across all operators and provides immediate feedback about what each port represents without needing to reference documentation.
+
 ## Scale Operator (`$`) - Unified Scales and Chords:
 Outputs note and octave based on the provided root note, scale/chord type, and degree. The operator now supports a unified system with 62 total options: 10 essential scales (0-9), 26 chord root positions (a-z), and 26 chord first inversions (A-Z).
 
@@ -240,22 +243,3 @@ The MIDI CC operator sends MIDI Control Change messages with optional interpolat
 - Rate of 0 or `.` disables interpolation
 
 Uses a 128-step resolution for interpolation. The rate determines how many steps to skip per tick - higher rates mean faster but coarser transitions, lower rates mean smoother but slower transitions.
-
-
-## Teleport Operator (`X`) (Refactored)
-Teleport operator can teleport more than 1 glyph now. There's a new input to the left of vertical and horizontal offset inputs, which sets the "length of glyphs" to teleport (works similar to how Konkat or Query operators fetch multiple cells).
-
-Quick Tip: You can use this new 'multiglyph' Teleport along with the Scale operator and teleport the result (which can now include an octave value as well) to a midi operator!
-
-| Length | Vertical Offset | Horizontal Offset | Operator |
-|:--------:|:-------------:|:-----------------:|:-----------:|
-|    L     |       V       |         H         |      X      |
-
-
-## Query Operator (`Q`) (Refactored)
-This is a very minor change where the "length" parameter is moved to the left of offset parameters to match the layout of extended Teleport Operator.
-(Previously the input order was Vertical Offset, Horizontal Offset, Length. Now it's Length, Vertical Offset, Horizontal Offset)
-
-| Length | Vertical Offset | Horizontal Offset | Operator |
-|:--------:|:-------------:|:-----------------:|:-----------:|
-|    L     |       V       |         H         |      Q      |
